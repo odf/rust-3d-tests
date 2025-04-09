@@ -40,21 +40,16 @@ pub fn main() {
 
     let sun = three_d::DirectionalLight::new(
         &context,
-        1.0,
+        2.0,
         asset::Srgba::WHITE,
         asset::vec3(1.0, -1.0, -1.0)
     );
 
-    let point_light = three_d::PointLight {
-        intensity: 10.0,
-        color: asset::Srgba::WHITE,
-        position: asset::vec3(5.0, 2.0, 5.0),
-        attenuation: three_d::Attenuation {
-            constant: 0.0,
-            linear: 0.0,
-            quadratic: 1.0,
-        },
-    };
+    let ambient = three_d::AmbientLight::new(
+        &context,
+        0.1,
+        asset::Srgba::WHITE,
+    );
 
     window.render_loop(move |frame_input| {
         // This ensures a correct viewport after a window resize.
@@ -64,7 +59,7 @@ pub fn main() {
 
         frame_input.screen()
             .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
-            .render(&camera, &model, &[&sun, &point_light]);
+            .render(&camera, &model, &[&sun, &ambient]);
 
         // Ensures a valid return value.
         three_d::FrameOutput::default()
