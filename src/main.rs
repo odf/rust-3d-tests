@@ -29,7 +29,7 @@ pub fn main() {
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
             metallic: 0.0,
-            roughness: 0.2,
+            roughness: 0.5,
             ..Default::default()
         }
     );
