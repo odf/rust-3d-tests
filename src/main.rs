@@ -2,6 +2,7 @@ use three_d_asset as asset;
 use three_d::{self, Geometry};
 
 
+#[allow(dead_code)]
 pub fn main() {
     // On the web, this creates a canvas instead.
     let window = three_d::Window::new(three_d::WindowSettings {

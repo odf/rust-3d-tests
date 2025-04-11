@@ -1,5 +1,6 @@
 #![allow(special_module_name)]
 mod main;
+mod mesh;
 
 // Entry point for wasm
 #[cfg(target_arch = "wasm32")]
