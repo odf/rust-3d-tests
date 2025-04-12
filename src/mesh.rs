@@ -120,10 +120,10 @@ impl<T> Mesh<T> {
 }
 
 
-fn extract_cycles(items: Vec<usize>, advance: BTreeMap<usize, usize>)
-    -> Vec<Vec<(usize, usize)>>
+fn extract_cycles<T: Copy + Ord>(items: Vec<T>, advance: BTreeMap<T, T>)
+    -> Vec<Vec<(T, T)>>
 {
-    let mut seen: BTreeSet<usize> = BTreeSet::new();
+    let mut seen: BTreeSet<T> = BTreeSet::new();
     let mut result = vec![];
 
     for v in items {
