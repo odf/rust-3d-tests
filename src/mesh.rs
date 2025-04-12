@@ -146,23 +146,45 @@ fn cyclic_pairs<T: Copy>(indices: &Vec<T>) -> Vec<(T, T)> {
 mod test {
     use super::*;
 
+    fn octahedron_vertices() -> Vec<String> {
+        vec![
+            "front".to_string(),
+            "right".to_string(),
+            "top".to_string(),
+            "back".to_string(),
+            "left".to_string(),
+            "bottom".to_string(),
+        ]
+    }
+
     fn octahedron() -> Mesh<String> {
-        let oct_verts = vec![
-            "front", "right", "top", "back", "left", "bottom"
-        ].iter().map(|s| s.to_string()).collect();
+        Mesh::from_oriented_faces_unchecked(
+            octahedron_vertices(),
+            vec![
+                vec![ 0, 1, 2 ],
+                vec![ 1, 0, 5 ],
+                vec![ 2, 1, 3 ],
+                vec![ 0, 2, 4 ],
+                vec![ 3, 5, 4 ],
+                vec![ 5, 3, 1 ],
+                vec![ 4, 5, 0 ],
+                vec![ 3, 4, 2 ],
+            ],
+        )
+    }
 
-        let octa_faces = vec![
-            vec![ 0, 1, 2 ],
-            vec![ 1, 0, 5 ],
-            vec![ 2, 1, 3 ],
-            vec![ 0, 2, 4 ],
-            vec![ 3, 5, 4 ],
-            vec![ 5, 3, 1 ],
-            vec![ 4, 5, 0 ],
-            vec![ 3, 4, 2 ],
-        ];
-
-        Mesh::from_oriented_faces_unchecked(oct_verts, octa_faces)
+    fn octahedron_open() -> Mesh<String> {
+        Mesh::from_oriented_faces_unchecked(
+            octahedron_vertices(),
+            vec![
+                vec![ 1, 0, 5 ],
+                vec![ 2, 1, 3 ],
+                vec![ 0, 2, 4 ],
+                vec![ 5, 3, 1 ],
+                vec![ 4, 5, 0 ],
+                vec![ 3, 4, 2 ],
+            ],
+        )
     }
 
     #[test]
@@ -172,7 +194,7 @@ mod test {
 
     #[test]
     fn test_from_unchecked() {
-        let octa = octahedron();
+        let octa = octahedron_open();
         println!("vertices: {:?}", octa.vertices);
         println!("at_vertex: {:?}", octa.at_vertex);
         println!("along_face: {:?}", octa.along_face);
