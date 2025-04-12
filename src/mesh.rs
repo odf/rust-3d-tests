@@ -9,6 +9,7 @@ pub fn opposite(e: &OrientedEdge) -> OrientedEdge {
 }
 
 
+#[derive(Debug)]
 pub struct Mesh<T> {
     vertices: Vec<T>,
     at_vertex: Vec<OrientedEdge>,
@@ -60,33 +61,67 @@ impl<T> Mesh<T> {
             .collect::<BTreeMap<_, _>>().values().cloned()
             .collect();
 
-        todo!()
+        let to_face: BTreeMap<_, _> = oriented_edges_lists.iter()
+            .enumerate()
+            .flat_map(|(i, f)| f.iter().map(move |&e| (e, i)))
+            .collect();
+
+        let along_face: Vec<_> = to_face.iter()
+            .map(|(&e, &f)| (f, e))
+            .collect::<BTreeMap<_, _>>().iter()
+            .map(|(_, &e)| e)
+            .collect();
+
+        let to_boundary_component: BTreeMap<_, _> = boundary_lists.iter()
+            .enumerate()
+            .flat_map(|(i, b)| b.iter().map(move |&e| (e, i)))
+            .collect();
+
+        let along_boundary_component: Vec<_> = to_boundary_component.iter()
+            .map(|(&e, &b)| (b, e))
+            .collect::<BTreeMap<_, _>>().iter()
+            .map(|(_, &e)| e)
+            .collect();
+
+        let next: BTreeMap<_, _> = oriented_edges_lists.iter()
+            .chain(boundary_lists.iter())
+            .flat_map(cyclic_pairs)
+            .collect();
+
+        Mesh {
+            vertices,
+            at_vertex,
+            along_face,
+            along_boundary_component,
+            to_face,
+            to_boundary_component,
+            next,
+        }
     }
 }
 
 
 fn extract_cycles(items: Vec<usize>, advance: BTreeMap<usize, usize>)
-    -> Vec<Vec<usize>>
+    -> Vec<Vec<(usize, usize)>>
 {
     let mut seen: BTreeSet<usize> = BTreeSet::new();
     let mut result = vec![];
 
     for v in items {
         if !seen.contains(&v) {
-            let mut cycle = vec![v];
+            let mut cycle = vec![];
             let mut w = v;
             loop {
-                match advance.get(&w) {
-                    Some(&u) if u == v => break,
-                    Some(&u) => {
-                        cycle.push(u);
-                        seen.insert(u);
-                        w = u;
-                    },
-                    None => {
-                        cycle.clear();
+                if let Some(&u) = advance.get(&w) {
+                    cycle.push((w, u));
+                    seen.insert(u);
+                    w = u;
+                    if w == v {
                         break;
                     }
+                } else {
+                    cycle.clear();
+                    break;
                 }
             }
             result.push(cycle);
@@ -109,10 +144,41 @@ fn cyclic_pairs<T: Copy>(indices: &Vec<T>) -> Vec<(T, T)> {
 
 #[cfg(test)]
 mod test {
-    use crate::mesh::cyclic_pairs;
+    use super::*;
+
+    fn octahedron() -> Mesh<String> {
+        let oct_verts = vec![
+            "front", "right", "top", "back", "left", "bottom"
+        ].iter().map(|s| s.to_string()).collect();
+
+        let octa_faces = vec![
+            vec![ 0, 1, 2 ],
+            vec![ 1, 0, 5 ],
+            vec![ 2, 1, 3 ],
+            vec![ 0, 2, 4 ],
+            vec![ 3, 5, 4 ],
+            vec![ 5, 3, 1 ],
+            vec![ 4, 5, 0 ],
+            vec![ 3, 4, 2 ],
+        ];
+
+        Mesh::from_oriented_faces_unchecked(oct_verts, octa_faces)
+    }
 
     #[test]
     fn test_cyclic_pairs() {
         assert_eq!(cyclic_pairs(&vec![1, 2, 3]), vec![(1, 2), (2, 3), (3, 1)]);
+    }
+
+    #[test]
+    fn test_from_unchecked() {
+        let octa = octahedron();
+        println!("vertices: {:?}", octa.vertices);
+        println!("at_vertex: {:?}", octa.at_vertex);
+        println!("along_face: {:?}", octa.along_face);
+        println!("along_boundary_component: {:?}", octa.along_boundary_component);
+        println!("to_face: {:?}", octa.to_face);
+        println!("to_boundary_component: {:?}", octa.to_boundary_component);
+        println!("next: {:?}", octa.next);
     }
 }
