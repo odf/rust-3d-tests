@@ -98,6 +98,25 @@ impl<T> Mesh<T> {
             next,
         }
     }
+
+    pub fn from_oriented_faces(
+        vertices: Vec<T>,
+        face_lists: Vec<Vec<usize>>
+    ) -> Result<Mesh<T>, String> {
+        let defined_vertices: BTreeSet<_> = (0..vertices.len()).collect();
+        let seen_vertices: BTreeSet<_> = face_lists.iter()
+            .flatten().cloned().collect();
+
+        if seen_vertices.iter().any(|v| !defined_vertices.contains(v)) {
+            Err("an undefined vertex appears in a face".to_string())
+        } else if defined_vertices.iter().any(|v| !seen_vertices.contains(v)) {
+            Err("some vertex does not appear in any faces".to_string())
+        } else if face_lists.iter().any(|f| f.len() < 2) {
+            Err("some face has fewer than two vertices".to_string())
+        } else {
+            Ok(Mesh::from_oriented_faces_unchecked(vertices, face_lists))
+        }
+    }
 }
 
 
@@ -158,7 +177,7 @@ mod test {
     }
 
     fn octahedron() -> Mesh<String> {
-        Mesh::from_oriented_faces_unchecked(
+        Mesh::from_oriented_faces(
             octahedron_vertices(),
             vec![
                 vec![ 0, 1, 2 ],
@@ -170,11 +189,11 @@ mod test {
                 vec![ 4, 5, 0 ],
                 vec![ 3, 4, 2 ],
             ],
-        )
+        ).unwrap()
     }
 
     fn octahedron_open() -> Mesh<String> {
-        Mesh::from_oriented_faces_unchecked(
+        Mesh::from_oriented_faces(
             octahedron_vertices(),
             vec![
                 vec![ 1, 0, 5 ],
@@ -184,7 +203,7 @@ mod test {
                 vec![ 4, 5, 0 ],
                 vec![ 3, 4, 2 ],
             ],
-        )
+        ).unwrap()
     }
 
     #[test]
