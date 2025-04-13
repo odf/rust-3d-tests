@@ -138,6 +138,10 @@ impl<T> Mesh<T> {
             Ok(Mesh::from_oriented_faces_unchecked(vertices, face_lists))
         }
     }
+
+    pub fn vertices<'a>(&'a self) -> &'a Vec<T> {
+        &self.vertices
+    }
 }
 
 
@@ -360,5 +364,15 @@ mod test {
                     .cloned().collect()
             ).is_err()
         );
+    }
+
+    #[test]
+    fn test_vertices_method() {
+        let mut mesh = Mesh::from_oriented_faces(
+            octahedron_vertices(),
+            octahedron_faces()
+        ).unwrap();
+
+        assert_eq!(mesh.vertices(), &octahedron_vertices());
     }
 }
