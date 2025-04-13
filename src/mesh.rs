@@ -153,26 +153,34 @@ fn extract_cycles<T: Copy + Ord>(items: Vec<T>, advance: BTreeMap<T, T>)
 
     for v in items {
         if !seen.contains(&v) {
-            let mut cycle = vec![];
-            let mut w = v;
-            loop {
-                if let Some(&u) = advance.get(&w) {
-                    cycle.push((w, u));
-                    seen.insert(u);
-                    w = u;
-                    if w == v {
-                        break;
-                    }
-                } else {
-                    cycle.clear();
-                    break;
-                }
-            }
-            result.push(cycle);
+            let cycle = trace_cycle(v, &advance);
+            seen.extend(&cycle);
+            result.push(cyclic_pairs(&cycle));
         }
     }
 
     result
+}
+
+
+fn trace_cycle<T: Copy + Ord>(v: T, advance: &BTreeMap<T, T>) -> Vec<T> {
+    let mut cycle = vec![];
+    let mut w = v;
+
+    loop {
+        if let Some(&u) = advance.get(&w) {
+            cycle.push(w);
+            w = u;
+            if w == v {
+                break;
+            }
+        } else {
+            cycle.clear();
+            break;
+        }
+    }
+
+    cycle
 }
 
 
