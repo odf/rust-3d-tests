@@ -221,8 +221,8 @@ fn all_unique<T: Ord, I: IntoIterator<Item=T>>(items: I) -> bool {
 mod test {
     use super::*;
 
-    fn octahedron_vertices() -> Vec<String> {
-        vec![
+    fn octahedron_vertices() -> [String; 6] {
+        [
             "front".to_string(),
             "right".to_string(),
             "top".to_string(),
@@ -232,8 +232,8 @@ mod test {
         ]
     }
 
-    fn octahedron_faces() -> Vec<Vec<usize>> {
-        vec![
+    fn octahedron_faces() -> [Vec<usize>; 8] {
+        [
             vec![ 0, 1, 2 ],
             vec![ 1, 0, 5 ],
             vec![ 2, 1, 3 ],
@@ -292,7 +292,7 @@ mod test {
     fn test_undefined_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices()[1..].iter(),
+                octahedron_vertices()[1..].into_iter(),
                 octahedron_faces()
             ).is_err()
         );
@@ -302,7 +302,7 @@ mod test {
     fn test_unreferenced_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices().iter().chain([&"off".to_string()]),
+                octahedron_vertices().into_iter().chain(["off".to_string()]),
                 octahedron_faces()
             ).is_err()
         );
@@ -348,7 +348,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                octahedron_faces().iter().chain([&vec![]]).cloned()
+                octahedron_faces().into_iter().chain([vec![]])
             ).is_err()
         );
     }
@@ -358,7 +358,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                octahedron_faces().iter().chain([&vec![0]]).cloned()
+                octahedron_faces().into_iter().chain([vec![0]])
             ).is_err()
         );
     }
@@ -375,9 +375,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                octahedron_faces().iter()
-                    .skip(1).chain([&vec![0, 2, 1]])
-                    .cloned()
+                octahedron_faces().into_iter().skip(1).chain([vec![0, 2, 1]])
             ).is_err()
         );
     }
