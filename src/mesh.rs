@@ -99,10 +99,19 @@ impl<T> Mesh<T> {
         }
     }
 
-    pub fn from_oriented_faces(
-        vertices: Vec<T>,
-        face_lists: Vec<Vec<usize>>
+    pub fn from_oriented_faces<
+        I1: IntoIterator<Item=T>,
+        I2: IntoIterator<Item=usize>,
+        I3: IntoIterator<Item=I2>
+    >(
+        vertices: I1,
+        face_lists_in: I3
     ) -> Result<Mesh<T>, String> {
+        let vertices: Vec<_> = vertices.into_iter().collect();
+        let face_lists: Vec<Vec<_>> = face_lists_in.into_iter()
+            .map(|f| f.into_iter().collect())
+            .collect();
+
         let defined_vertices: BTreeSet<_> = (0..vertices.len()).collect();
 
         let seen_vertices: BTreeSet<_> = face_lists.iter()
@@ -260,13 +269,13 @@ mod test {
     fn test_with_boundary() {
         let octa = Mesh::from_oriented_faces(
             octahedron_vertices(),
-            vec![
-                vec![ 1, 0, 5 ],
-                vec![ 2, 1, 3 ],
-                vec![ 0, 2, 4 ],
-                vec![ 5, 3, 1 ],
-                vec![ 4, 5, 0 ],
-                vec![ 3, 4, 2 ],
+            [
+                [ 1, 0, 5 ],
+                [ 2, 1, 3 ],
+                [ 0, 2, 4 ],
+                [ 5, 3, 1 ],
+                [ 4, 5, 0 ],
+                [ 3, 4, 2 ],
             ],
         ).unwrap();
 
@@ -283,7 +292,7 @@ mod test {
     fn test_undefined_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices()[1..].to_vec(),
+                octahedron_vertices()[1..].iter(),
                 octahedron_faces()
             ).is_err()
         );
@@ -293,8 +302,7 @@ mod test {
     fn test_unreferenced_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices().iter()
-                    .chain([&"off".to_string()]).collect(),
+                octahedron_vertices().iter().chain([&"off".to_string()]),
                 octahedron_faces()
             ).is_err()
         );
@@ -305,7 +313,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                vec![
+                [
                     vec![ 0, 1, 2, 0, 4, 5 ],
                     vec![ 1, 0, 5 ],
                     vec![ 2, 1, 3 ],
@@ -323,13 +331,13 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                vec![
-                    vec![ 1, 0, 5 ],
-                    vec![ 2, 1, 3 ],
-                    vec![ 0, 2, 4 ],
-                    vec![ 3, 5, 4 ],
-                    vec![ 5, 3, 1 ],
-                    vec![ 3, 4, 2 ],
+                [
+                    [ 1, 0, 5 ],
+                    [ 2, 1, 3 ],
+                    [ 0, 2, 4 ],
+                    [ 3, 5, 4 ],
+                    [ 5, 3, 1 ],
+                    [ 3, 4, 2 ],
                 ]
             ).is_err()
         );
@@ -340,7 +348,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                octahedron_faces().iter().chain([&vec![]]).cloned().collect()
+                octahedron_faces().iter().chain([&vec![]]).cloned()
             ).is_err()
         );
     }
@@ -350,7 +358,7 @@ mod test {
         assert!(
             Mesh::from_oriented_faces(
                 octahedron_vertices(),
-                octahedron_faces().iter().chain([&vec![0]]).cloned().collect()
+                octahedron_faces().iter().chain([&vec![0]]).cloned()
             ).is_err()
         );
     }
@@ -358,7 +366,7 @@ mod test {
     #[test]
     fn test_single_two_gon() {
         assert!(
-            Mesh::from_oriented_faces(vec!['a', 'b'], vec![vec![0, 1]]).is_ok()
+            Mesh::from_oriented_faces(['a', 'b'], [[0, 1]]).is_ok()
         );
     }
 
@@ -369,14 +377,14 @@ mod test {
                 octahedron_vertices(),
                 octahedron_faces().iter()
                     .skip(1).chain([&vec![0, 2, 1]])
-                    .cloned().collect()
+                    .cloned()
             ).is_err()
         );
     }
 
     #[test]
     fn test_vertices_method() {
-        let mut mesh = Mesh::from_oriented_faces(
+        let mesh = Mesh::from_oriented_faces(
             octahedron_vertices(),
             octahedron_faces()
         ).unwrap();
