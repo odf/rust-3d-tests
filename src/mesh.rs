@@ -51,10 +51,7 @@ impl<T> Mesh<T> {
             .filter(|e| !oriented_edge_set.contains(&opposite(e)))
             .cloned().collect();
 
-        let boundary_lists = extract_cycles(
-            boundary_edges.iter().map(|&(v, _)| v).collect(),
-            boundary_edges.iter().map(opposite).collect()
-        );
+        let boundary_lists = boundary_cycles(boundary_edges);
 
         let at_vertex: Vec<_> = oriented_edges.iter()
             .map(|&(v, w)| (v, (v, w)))
@@ -154,15 +151,18 @@ impl<T> Mesh<T> {
 }
 
 
-fn extract_cycles<T: Copy + Ord>(items: Vec<T>, advance: BTreeMap<T, T>)
-    -> Vec<Vec<(T, T)>>
+fn boundary_cycles(boundary_edges: Vec<OrientedEdge>)
+    -> Vec<Vec<(usize, usize)>>
 {
-    let mut seen: BTreeSet<T> = BTreeSet::new();
+    let items: Vec<_> = boundary_edges.iter().map(|&(v, _)| v).collect();
+    let advance: BTreeMap<_, _> = boundary_edges.iter().map(opposite).collect();
+
+    let mut seen: BTreeSet<usize> = BTreeSet::new();
     let mut result = vec![];
 
     for v in items {
         if !seen.contains(&v) {
-            let cycle = trace_cycle(v, &advance);
+            let cycle = trace_cycle(v, |v| advance.get(&v).copied());
             seen.extend(&cycle);
             result.push(cyclic_pairs(&cycle));
         }
@@ -172,12 +172,14 @@ fn extract_cycles<T: Copy + Ord>(items: Vec<T>, advance: BTreeMap<T, T>)
 }
 
 
-fn trace_cycle<T: Copy + Ord>(v: T, advance: &BTreeMap<T, T>) -> Vec<T> {
+fn trace_cycle<T: Copy + PartialEq>(v: T, advance: impl Fn(T) -> Option<T>)
+    -> Vec<T>
+{
     let mut cycle = vec![];
     let mut w = v;
 
     loop {
-        if let Some(&u) = advance.get(&w) {
+        if let Some(u) = advance(w) {
             cycle.push(w);
             w = u;
             if w == v {
