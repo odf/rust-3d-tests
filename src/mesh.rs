@@ -170,6 +170,13 @@ impl<T> Mesh<T> {
             .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
+
+    pub fn edge_indices(&self) -> Vec<(usize, usize)> {
+        self.next.keys()
+            .map(|&(u, v)| (u.min(v), u.max(v)))
+            .collect::<BTreeSet<_>>().into_iter()
+            .collect()
+    }
 }
 
 
@@ -290,7 +297,9 @@ mod test {
         let mesh = Mesh::from_oriented_faces([0; 0], [[]; 0]).unwrap();
 
         assert_eq!(mesh.vertices(), &[]);
+        assert_eq!(mesh.edge_indices(), []);
         assert_eq!(mesh.face_indices(), [[]; 0]);
+        assert_eq!(mesh.boundary_indices(), [[]; 0]);
     }
 
     #[test]
@@ -298,6 +307,24 @@ mod test {
         let octa = Mesh::from_oriented_faces(
             octahedron_vertices(), octahedron_faces()
         ).unwrap();
+
+        assert_eq!(
+            octa.edge_indices(),
+            [
+                ( 0, 1 ),
+                ( 0, 2 ),
+                ( 0, 4 ),
+                ( 0, 5 ),
+                ( 1, 2 ),
+                ( 1, 3 ),
+                ( 1, 5 ),
+                ( 2, 3 ),
+                ( 2, 4 ),
+                ( 3, 4 ),
+                ( 3, 5 ),
+                ( 4, 5 ),
+            ]
+        );
 
         assert_eq!(
             octa.face_indices(),
@@ -329,6 +356,24 @@ mod test {
                 [ 3, 4, 2 ],
             ],
         ).unwrap();
+
+        assert_eq!(
+            octa.edge_indices(),
+            [
+                ( 0, 1 ),
+                ( 0, 2 ),
+                ( 0, 4 ),
+                ( 0, 5 ),
+                ( 1, 2 ),
+                ( 1, 3 ),
+                ( 1, 5 ),
+                ( 2, 3 ),
+                ( 2, 4 ),
+                ( 3, 4 ),
+                ( 3, 5 ),
+                ( 4, 5 ),
+            ]
+        );
 
         assert_eq!(
             octa.face_indices(),
