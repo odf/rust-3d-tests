@@ -164,6 +164,14 @@ impl<T> Mesh<T> {
         result.sort();
         result
     }
+
+    pub fn boundary_indices(&self) -> Vec<Vec<usize>> {
+        let mut result: Vec<_> = self.along_boundary_component.iter()
+            .map(|&e| self.vertices_in_face(e))
+            .collect();
+        result.sort();
+        result
+    }
 }
 
 
@@ -295,17 +303,19 @@ mod test {
 
         assert_eq!(
             octa.face_indices(),
-            vec![
-                vec![ 0, 1, 2 ],
-                vec![ 0, 2, 4 ],
-                vec![ 0, 4, 5 ],
-                vec![ 0, 5, 1 ],
-                vec![ 1, 3, 2 ],
-                vec![ 1, 5, 3 ],
-                vec![ 2, 3, 4 ],
-                vec![ 3, 5, 4 ],
+            [
+                [ 0, 1, 2 ],
+                [ 0, 2, 4 ],
+                [ 0, 4, 5 ],
+                [ 0, 5, 1 ],
+                [ 1, 3, 2 ],
+                [ 1, 5, 3 ],
+                [ 2, 3, 4 ],
+                [ 3, 5, 4 ],
             ]
-        )
+        );
+
+        assert_eq!(octa.boundary_indices(), [[]; 0]);
     }
 
     #[test]
@@ -324,15 +334,17 @@ mod test {
 
         assert_eq!(
             octa.face_indices(),
-            vec![
-                vec![ 0, 2, 4 ],
-                vec![ 0, 4, 5 ],
-                vec![ 0, 5, 1 ],
-                vec![ 1, 3, 2 ],
-                vec![ 1, 5, 3 ],
-                vec![ 2, 3, 4 ],
+            [
+                [ 0, 2, 4 ],
+                [ 0, 4, 5 ],
+                [ 0, 5, 1 ],
+                [ 1, 3, 2 ],
+                [ 1, 5, 3 ],
+                [ 2, 3, 4 ],
             ]
-        )
+        );
+
+        assert_eq!(octa.boundary_indices(), [[ 0, 1, 2 ], [ 3, 5, 4 ]]);
     }
 
     #[test]
