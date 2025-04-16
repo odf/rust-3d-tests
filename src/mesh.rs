@@ -158,19 +158,17 @@ impl<T> Mesh<T> {
     }
 
     pub fn face_indices(&self) -> Vec<Vec<usize>> {
-        let mut result: Vec<_> = self.along_face.iter()
+        self.along_face.iter()
             .map(|&e| self.vertices_in_face(e))
-            .collect();
-        result.sort();
-        result
+            .collect::<BTreeSet<_>>().into_iter()
+            .collect()
     }
 
     pub fn boundary_indices(&self) -> Vec<Vec<usize>> {
-        let mut result: Vec<_> = self.along_boundary_component.iter()
+        self.along_boundary_component.iter()
             .map(|&e| self.vertices_in_face(e))
-            .collect();
-        result.sort();
-        result
+            .collect::<BTreeSet<_>>().into_iter()
+            .collect()
     }
 }
 
