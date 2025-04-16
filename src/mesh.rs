@@ -148,6 +148,22 @@ impl<T> Mesh<T> {
     pub fn vertices<'a>(&'a self) -> &'a Vec<T> {
         &self.vertices
     }
+
+    fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
+        canonical_circular(
+            trace_cycle(start, |e| self.next.get(&e).copied()).iter()
+                .map(|&(v, _)| v)
+                .collect()
+        )
+    }
+
+    pub fn face_indices(&self) -> Vec<Vec<usize>> {
+        let mut result: Vec<_> = self.along_face.iter()
+            .map(|&e| self.vertices_in_face(e))
+            .collect();
+        result.sort();
+        result
+    }
 }
 
 
@@ -205,6 +221,17 @@ fn cyclic_pairs<T: Copy>(indices: &Vec<T>) -> Vec<(T, T)> {
 }
 
 
+fn canonical_circular<T: Copy + Ord>(list: Vec<T>) -> Vec<T> {
+    if list.is_empty() {
+        vec![]
+    } else {
+        (0..list.len()).map(|k|
+            list.iter().skip(k).chain(list.iter().take(k)).cloned().collect()
+        ).min().unwrap()
+    }
+}
+
+
 fn all_unique<T: Ord, I: IntoIterator<Item=T>>(items: I) -> bool {
     let mut seen: BTreeSet<T> = BTreeSet::new();
 
@@ -253,18 +280,32 @@ mod test {
     }
 
     #[test]
+    fn test_empty() {
+        let mesh = Mesh::from_oriented_faces([0; 0], [[]; 0]).unwrap();
+
+        assert_eq!(mesh.vertices(), &[]);
+        assert_eq!(mesh.face_indices(), [[]; 0]);
+    }
+
+    #[test]
     fn test_without_boundary() {
         let octa = Mesh::from_oriented_faces(
             octahedron_vertices(), octahedron_faces()
         ).unwrap();
 
-        println!("vertices: {:?}", octa.vertices);
-        println!("at_vertex: {:?}", octa.at_vertex);
-        println!("along_face: {:?}", octa.along_face);
-        println!("along_boundary_component: {:?}", octa.along_boundary_component);
-        println!("to_face: {:?}", octa.to_face);
-        println!("to_boundary_component: {:?}", octa.to_boundary_component);
-        println!("next: {:?}", octa.next);
+        assert_eq!(
+            octa.face_indices(),
+            vec![
+                vec![ 0, 1, 2 ],
+                vec![ 0, 2, 4 ],
+                vec![ 0, 4, 5 ],
+                vec![ 0, 5, 1 ],
+                vec![ 1, 3, 2 ],
+                vec![ 1, 5, 3 ],
+                vec![ 2, 3, 4 ],
+                vec![ 3, 5, 4 ],
+            ]
+        )
     }
 
     #[test]
@@ -281,13 +322,17 @@ mod test {
             ],
         ).unwrap();
 
-        println!("vertices: {:?}", octa.vertices);
-        println!("at_vertex: {:?}", octa.at_vertex);
-        println!("along_face: {:?}", octa.along_face);
-        println!("along_boundary_component: {:?}", octa.along_boundary_component);
-        println!("to_face: {:?}", octa.to_face);
-        println!("to_boundary_component: {:?}", octa.to_boundary_component);
-        println!("next: {:?}", octa.next);
+        assert_eq!(
+            octa.face_indices(),
+            vec![
+                vec![ 0, 2, 4 ],
+                vec![ 0, 4, 5 ],
+                vec![ 0, 5, 1 ],
+                vec![ 1, 3, 2 ],
+                vec![ 1, 5, 3 ],
+                vec![ 2, 3, 4 ],
+            ]
+        )
     }
 
     #[test]
