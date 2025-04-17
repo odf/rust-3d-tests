@@ -1,8 +1,9 @@
 use three_d_asset as asset;
-use three_d::{self, Geometry};
+use three_d::Geometry;
+
+use rust_3d_tests::mesh;
 
 
-#[allow(dead_code)]
 pub fn main() {
     // On the web, this creates a canvas instead.
     let window = three_d::Window::new(three_d::WindowSettings {
