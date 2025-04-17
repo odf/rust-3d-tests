@@ -198,6 +198,19 @@ impl<T> Mesh<T> {
 }
 
 
+impl<T: Clone> Mesh<T> {
+    pub fn triangulate(&self) -> Self {
+        let vertices = self.vertices.clone();
+
+        let faces = self.face_indices().iter()
+            .flat_map(triangulate)
+            .collect();
+
+        Self::from_oriented_faces_unchecked(vertices, faces)
+    }
+}
+
+
 fn boundary_cycles(boundary_edges: Vec<OrientedEdge>)
     -> Vec<Vec<(usize, usize)>>
 {
@@ -239,6 +252,13 @@ fn trace_cycle<T: Copy + PartialEq>(v: T, advance: impl Fn(T) -> Option<T>)
     }
 
     cycle
+}
+
+
+fn triangulate<T: Copy>(corners: &Vec<T>) -> Vec<Vec<T>> {
+    (1..(corners.len() - 1))
+        .map(|i| vec![corners[0], corners[i], corners[i + 1]])
+        .collect()
 }
 
 

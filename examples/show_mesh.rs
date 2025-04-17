@@ -17,7 +17,7 @@ pub fn main() {
 
     let mut camera = three_d::Camera::new_perspective(
         window.viewport(),
-        asset::vec3(0.0, 0.0, 8.0),
+        asset::vec3(0.0, 2.0, 8.0),
         asset::vec3(0.0, 0.0, 0.0),
         asset::vec3(0.0, 1.0, 0.0),
         asset::degrees(25.0),
@@ -27,7 +27,8 @@ pub fn main() {
 
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
-        three_d::Mesh::new(&context, &tetra_mesh()),
+        //three_d::Mesh::new(&context, &tetra_mesh()),
+        three_d::Mesh::new(&context, &cube_mesh()),
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
             metallic: 0.0,
@@ -89,6 +90,32 @@ fn tetra_mesh() -> three_d::CpuMesh {
 }
 
 
+fn cube_mesh() -> three_d::CpuMesh {
+    Mesh::from_oriented_faces(
+        [
+            ( 1.0,  1.0,  1.0), // 0
+            ( 1.0,  1.0, -1.0), // 1
+            ( 1.0, -1.0,  1.0), // 2
+            ( 1.0, -1.0, -1.0), // 3
+            (-1.0,  1.0,  1.0), // 4
+            (-1.0,  1.0, -1.0), // 5
+            (-1.0, -1.0,  1.0), // 6
+            (-1.0, -1.0, -1.0), // 7
+        ],
+        [
+            [0, 4, 6, 2],
+            [1, 3, 7, 5],
+            [0, 2, 3, 1],
+            [2, 6, 7, 3],
+            [6, 4, 5, 7],
+            [4, 0, 1, 5],
+        ]
+    )
+        .unwrap()
+        .to_cpu_mesh()
+}
+
+
 trait ToCpuMesh {
     fn to_cpu_mesh(&self) -> three_d::CpuMesh;
 }
@@ -96,13 +123,13 @@ trait ToCpuMesh {
 
 impl ToCpuMesh for Mesh<(f32, f32, f32)> {
     fn to_cpu_mesh(&self) -> three_d::CpuMesh {
-        // TODO: triangulate first
+        let trimesh = self.triangulate();
 
-        let positions: Vec<_> = self.vertices().iter()
+        let positions: Vec<_> = trimesh.vertices().iter()
             .map(|&(x, y, z)| asset::vec3(x, y, z))
             .collect();
 
-        let indices: Vec<_> = self.face_indices().iter()
+        let indices: Vec<_> = trimesh.face_indices().iter()
             .flatten()
             .map(|&x| x as u32)
             .collect();
