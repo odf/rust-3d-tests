@@ -1,7 +1,7 @@
 use three_d_asset as asset;
 use three_d::Geometry;
 
-use rust_3d_tests::mesh;
+use rust_3d_tests::mesh::Mesh;
 
 
 pub fn main() {
@@ -70,25 +70,49 @@ pub fn main() {
 
 
 fn tetra_mesh() -> three_d::CpuMesh {
-    let positions: Vec<_> = vec![
-        ( 1.0,  1.0,  1.0),
-        ( 1.0, -1.0, -1.0),
-        (-1.0,  1.0, -1.0),
-        (-1.0, -1.0,  1.0)
-    ].iter().map(|&(x, y, z)| asset::vec3(x, y, z)).collect();
+    Mesh::from_oriented_faces(
+        [
+            ( 1.0,  1.0,  1.0),
+            ( 1.0, -1.0, -1.0),
+            (-1.0,  1.0, -1.0),
+            (-1.0, -1.0,  1.0)
+        ],
+        [
+            [0, 1, 2],
+            [1, 0, 3],
+            [2, 1, 3],
+            [0, 2, 3],
+        ]
+    )
+        .unwrap()
+        .to_cpu_mesh()
+}
 
-    let indices = vec![
-        0, 1, 2,
-        1, 0, 3,
-        2, 1, 3,
-        0, 2, 3,
-    ];
 
-    let mut mesh = three_d::CpuMesh {
-        positions: asset::Positions::F32(positions),
-        indices: asset::Indices::U8(indices),
-        ..Default::default()
-    };
-    mesh.compute_normals();
-    mesh
+trait ToCpuMesh {
+    fn to_cpu_mesh(&self) -> three_d::CpuMesh;
+}
+
+
+impl ToCpuMesh for Mesh<(f32, f32, f32)> {
+    fn to_cpu_mesh(&self) -> three_d::CpuMesh {
+        // TODO: triangulate first
+
+        let positions: Vec<_> = self.vertices().iter()
+            .map(|&(x, y, z)| asset::vec3(x, y, z))
+            .collect();
+
+        let indices: Vec<_> = self.face_indices().iter()
+            .flatten()
+            .map(|&x| x as u32)
+            .collect();
+
+        let mut mesh = three_d::CpuMesh {
+            positions: asset::Positions::F32(positions),
+            indices: asset::Indices::U32(indices),
+            ..Default::default()
+        };
+        mesh.compute_normals();
+        mesh
+    }
 }
