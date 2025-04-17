@@ -151,7 +151,8 @@ impl<T> Mesh<T> {
 
     fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.next.get(&e).copied()).iter()
+            trace_cycle(start, |e| self.next.get(&e).copied())
+                .iter()
                 .map(|&(v, _)| v)
                 .collect()
         )
@@ -174,6 +175,23 @@ impl<T> Mesh<T> {
     pub fn edge_indices(&self) -> Vec<(usize, usize)> {
         self.next.keys()
             .map(|&(u, v)| (u.min(v), u.max(v)))
+            .collect::<BTreeSet<_>>().into_iter()
+            .collect()
+    }
+
+    fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
+        canonical_circular(
+            trace_cycle(start, |e| self.next.get(&opposite(&e)).copied())
+                .iter()
+                .map(|&(_, w)| w)
+                .rev()
+                .collect()
+        )
+    }
+
+    pub fn neighbor_indices(&self) -> Vec<Vec<usize>> {
+        self.at_vertex.iter()
+            .map(|&e| self.vertex_neighbors(e))
             .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
@@ -300,6 +318,7 @@ mod test {
         assert_eq!(mesh.edge_indices(), []);
         assert_eq!(mesh.face_indices(), [[]; 0]);
         assert_eq!(mesh.boundary_indices(), [[]; 0]);
+        assert_eq!(mesh.neighbor_indices(), [[]; 0]);
     }
 
     #[test]
@@ -341,6 +360,18 @@ mod test {
         );
 
         assert_eq!(octa.boundary_indices(), [[]; 0]);
+
+        assert_eq!(
+            octa.neighbor_indices(),
+            [
+                [ 0, 1, 3, 4 ],
+                [ 0, 2, 3, 5 ],
+                [ 0, 4, 3, 1 ],
+                [ 0, 5, 3, 2 ],
+                [ 1, 2, 4, 5 ],
+                [ 1, 5, 4, 2 ],
+            ]
+        );
     }
 
     #[test]
@@ -388,6 +419,18 @@ mod test {
         );
 
         assert_eq!(octa.boundary_indices(), [[ 0, 1, 2 ], [ 3, 5, 4 ]]);
+
+        assert_eq!(
+            octa.neighbor_indices(),
+            [
+                [ 0, 1, 3, 4 ],
+                [ 0, 2, 3, 5 ],
+                [ 0, 4, 3, 1 ],
+                [ 0, 5, 3, 2 ],
+                [ 1, 2, 4, 5 ],
+                [ 1, 5, 4, 2 ],
+            ]
+        );
     }
 
     #[test]
