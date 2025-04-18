@@ -332,7 +332,7 @@ mod test {
 
     #[test]
     fn test_empty() {
-        let mesh = Mesh::from_oriented_faces([0; 0], [[]; 0]).unwrap();
+        let mesh = Mesh::<i32>::empty();
 
         assert_eq!(mesh.vertices(), &[]);
         assert_eq!(mesh.edge_indices(), []);
