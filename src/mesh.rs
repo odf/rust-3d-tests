@@ -195,6 +195,15 @@ impl<T> Mesh<T> {
             .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
+
+    pub fn map_vertices<S>(&self, f: impl Fn(&T) -> S)
+        -> Result<Mesh<S>, String>
+    {
+        Mesh::from_oriented_faces(
+            self.vertices.iter().map(f),
+            self.face_indices(),
+        )
+    }
 }
 
 
@@ -607,5 +616,16 @@ mod test {
                 [3, 4, 5],
             ]
         );
+    }
+
+    #[test]
+    fn test_map_vertices() {
+        let octa = Mesh::from_oriented_faces(
+            octahedron_vertices(), octahedron_faces()
+        ).unwrap();
+
+        let mapped = octa.map_vertices(|v| v[..2].to_uppercase()).unwrap();
+
+        assert_eq!(mapped.vertices(), &["FR", "RI", "TO", "BA", "LE", "BO"]);
     }
 }
