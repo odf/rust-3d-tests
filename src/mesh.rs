@@ -200,13 +200,10 @@ impl<T> Mesh<T> {
 
 impl<T: Clone> Mesh<T> {
     pub fn triangulate(&self) -> Result<Self, String> {
-        let vertices = self.vertices.clone();
-
-        let faces: Vec<_> = self.face_indices().iter()
-            .flat_map(triangulate)
-            .collect();
-
-        Self::from_oriented_faces(vertices, faces)
+        Self::from_oriented_faces(
+            self.vertices.clone(),
+            self.face_indices().iter().flat_map(triangulate)
+        )
     }
 }
 
