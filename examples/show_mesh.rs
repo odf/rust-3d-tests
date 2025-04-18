@@ -123,7 +123,7 @@ trait ToCpuMesh {
 
 impl ToCpuMesh for Mesh<(f32, f32, f32)> {
     fn to_cpu_mesh(&self) -> three_d::CpuMesh {
-        let trimesh = self.triangulate();
+        let trimesh = self.triangulate().unwrap();
 
         let positions: Vec<_> = trimesh.vertices().iter()
             .map(|&(x, y, z)| asset::vec3(x, y, z))

@@ -199,14 +199,14 @@ impl<T> Mesh<T> {
 
 
 impl<T: Clone> Mesh<T> {
-    pub fn triangulate(&self) -> Self {
+    pub fn triangulate(&self) -> Result<Self, String> {
         let vertices = self.vertices.clone();
 
-        let faces = self.face_indices().iter()
+        let faces: Vec<_> = self.face_indices().iter()
             .flat_map(triangulate)
             .collect();
 
-        Self::from_oriented_faces_unchecked(vertices, faces)
+        Self::from_oriented_faces(vertices, faces)
     }
 }
 
@@ -546,6 +546,21 @@ mod test {
     }
 
     #[test]
+    fn test_duplicate_edge() {
+        assert!(
+            Mesh::from_oriented_faces(
+                ['a', 'b', 'c', 'd'],
+                [
+                    [ 2, 0, 1 ],
+                    [ 0, 2, 3 ],
+                    [ 2, 0, 3 ],
+                    [ 0, 2, 1 ],
+                ]
+                ).is_err()
+        );
+    }
+
+    #[test]
     fn test_vertices_method() {
         let mesh = Mesh::from_oriented_faces(
             octahedron_vertices(),
@@ -553,5 +568,47 @@ mod test {
         ).unwrap();
 
         assert_eq!(mesh.vertices(), &octahedron_vertices());
+    }
+
+    #[test]
+    fn test_triangulate() {
+        assert_eq!(
+            triangulate(&vec![0, 1, 2, 3]),
+            vec![vec![0, 1, 2], vec![0, 2, 3]]
+        );
+
+        assert_eq!(
+            triangulate(&vec![3, 2, 1, 0]),
+            vec![vec![3, 2, 1], vec![3, 1, 0]]
+        );
+    }
+
+    #[test]
+    fn test_triangulate_mesh() {
+        let mesh = Mesh::from_oriented_faces(
+            ['a', 'b', 'c', 'd', 'e', 'f'],
+            [
+                vec![2, 1, 0],
+                vec![3, 4, 5],
+                vec![0, 1, 4, 3],
+                vec![1, 2, 5, 4],
+                vec![2, 0, 3, 5],
+            ]
+        ).unwrap().triangulate().unwrap();
+
+        assert_eq!(mesh.vertices(), &['a', 'b', 'c', 'd', 'e', 'f']);
+        assert_eq!(
+            mesh.face_indices(),
+            [
+                [0, 1, 4],
+                [0, 2, 1],
+                [0, 3, 5],
+                [0, 4, 3],
+                [0, 5, 2],
+                [1, 2, 5],
+                [1, 5, 4],
+                [3, 4, 5],
+            ]
+        );
     }
 }
