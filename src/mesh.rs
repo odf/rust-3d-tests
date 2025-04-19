@@ -713,6 +713,16 @@ mod test {
             &[3; 24]
         );
 
+        assert_eq!(
+            sub.neighbor_indices().iter().filter(|ns| ns.len() == 4).count(),
+            18
+        );
+
+        assert_eq!(
+            sub.neighbor_indices().iter().filter(|ns| ns.len() == 3).count(),
+            8
+        );
+
         for p in [
             point3(-6.0,  0.0,  0.0),
             point3(-3.0, -3.0,  0.0),
