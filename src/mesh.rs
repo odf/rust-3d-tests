@@ -724,19 +724,6 @@ mod test {
         );
 
         for p in [
-            point3(-6.0,  0.0,  0.0),
-            point3(-3.0, -3.0,  0.0),
-            point3(-3.0,  0.0, -3.0),
-            point3(-3.0,  0.0,  3.0),
-            point3(-3.0,  3.0,  0.0),
-            point3(-2.0, -2.0, -2.0),
-            point3(-2.0, -2.0,  2.0),
-            point3(-2.0,  2.0, -2.0),
-            point3(-2.0,  2.0,  2.0),
-            point3( 0.0, -6.0,  0.0),
-            point3( 0.0, -3.0, -3.0),
-            point3( 0.0, -3.0,  3.0),
-            point3( 0.0,  0.0, -6.0),
             point3( 0.0,  0.0,  6.0),
             point3( 0.0,  3.0, -3.0),
             point3( 0.0,  3.0,  3.0),
@@ -752,6 +739,7 @@ mod test {
             point3( 6.0,  0.0,  0.0),
         ] {
             assert!(sub.vertices().contains(&p));
+            assert!(sub.vertices().contains(&(p * -1.0)));
         }
     }
 }
