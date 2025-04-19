@@ -217,6 +217,43 @@ impl<T: Clone> Mesh<T> {
 }
 
 
+impl<T: Clone> Mesh<T> {
+    pub fn subdivide(&self, compose: impl Fn(&Vec<T>) -> T) -> Self {
+        let vertices = self.vertices();
+        let edges = self.edge_indices();
+        let nr_vertices = self.vertices().len();
+        let nr_edges = edges.len();
+
+        let mid_point_index: BTreeMap<_, _> = edges.iter().enumerate()
+            .map(|(i, e)| (e, i + nr_vertices))
+            .flat_map(|(&(u, v), i)| [((u, v), i), ((v, u), i)])
+            .collect();
+
+        let verts_out: Vec<_> = (0..nr_vertices).map(|i| vec![i])
+            .chain(edges.iter().map(|&(u, v)| vec![u, v]))
+            .chain(self.face_indices())
+            .map(|is| compose(
+                &is.iter().map(|&i| vertices[i].clone()).collect()
+            ))
+            .collect();
+
+        let mut faces_out = vec![];
+        for (&(u, v), &i) in self.to_face.iter() {
+            let w = self.next.get(&(u, v)).unwrap_or(&(v, u)).1;
+
+            faces_out.push(vec![
+                v,
+                mid_point_index[&(v, w)],
+                i + nr_vertices + nr_edges,
+                mid_point_index[&(u, v)]
+            ]);
+        }
+
+        Self::from_oriented_faces_unchecked(verts_out, faces_out)
+    }
+}
+
+
 fn boundary_cycles(boundary_edges: Vec<OrientedEdge>)
     -> Vec<Vec<(usize, usize)>>
 {
@@ -305,9 +342,11 @@ fn all_unique<T: Ord, I: IntoIterator<Item=T>>(items: I) -> bool {
 
 #[cfg(test)]
 mod test {
+    use cgmath::{point3, EuclideanSpace, Point3};
+
     use super::*;
 
-    fn octahedron_vertices() -> [String; 6] {
+    fn octa_vert_names() -> [String; 6] {
         [
             "front".to_string(),
             "right".to_string(),
@@ -318,7 +357,18 @@ mod test {
         ]
     }
 
-    fn octahedron_faces() -> [Vec<usize>; 8] {
+    fn octa_vert_pos() -> [Point3<f32>; 6] {
+        [
+            point3( 1.0,  0.0,  0.0),
+            point3( 0.0,  1.0,  0.0),
+            point3( 0.0,  0.0,  1.0),
+            point3(-1.0,  0.0,  0.0),
+            point3( 0.0, -1.0,  0.0),
+            point3( 0.0,  0.0, -1.0),
+        ]
+    }
+
+    fn octa_faces() -> [Vec<usize>; 8] {
         [
             vec![ 0, 1, 2 ],
             vec![ 1, 0, 5 ],
@@ -350,7 +400,7 @@ mod test {
     #[test]
     fn test_without_boundary() {
         let octa = Mesh::from_oriented_faces(
-            octahedron_vertices(), octahedron_faces()
+            octa_vert_names(), octa_faces()
         ).unwrap();
 
         assert_eq!(
@@ -403,7 +453,7 @@ mod test {
     #[test]
     fn test_with_boundary() {
         let octa = Mesh::from_oriented_faces(
-            octahedron_vertices(),
+            octa_vert_names(),
             [
                 [ 1, 0, 5 ],
                 [ 2, 1, 3 ],
@@ -463,8 +513,8 @@ mod test {
     fn test_undefined_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices()[1..].into_iter(),
-                octahedron_faces()
+                octa_vert_names()[1..].into_iter(),
+                octa_faces()
             ).is_err()
         );
     }
@@ -473,8 +523,8 @@ mod test {
     fn test_unreferenced_vertex() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices().into_iter().chain(["off".to_string()]),
-                octahedron_faces()
+                octa_vert_names().into_iter().chain(["off".to_string()]),
+                octa_faces()
             ).is_err()
         );
     }
@@ -483,7 +533,7 @@ mod test {
     fn test_vertex_duplicate_in_face() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices(),
+                octa_vert_names(),
                 [
                     vec![ 0, 1, 2, 0, 4, 5 ],
                     vec![ 1, 0, 5 ],
@@ -501,7 +551,7 @@ mod test {
     fn test_vertex_duplicate_in_boundary() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices(),
+                octa_vert_names(),
                 [
                     [ 1, 0, 5 ],
                     [ 2, 1, 3 ],
@@ -518,8 +568,8 @@ mod test {
     fn test_empty_face() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices(),
-                octahedron_faces().into_iter().chain([vec![]])
+                octa_vert_names(),
+                octa_faces().into_iter().chain([vec![]])
             ).is_err()
         );
     }
@@ -528,8 +578,8 @@ mod test {
     fn test_one_gon() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices(),
-                octahedron_faces().into_iter().chain([vec![0]])
+                octa_vert_names(),
+                octa_faces().into_iter().chain([vec![0]])
             ).is_err()
         );
     }
@@ -545,8 +595,8 @@ mod test {
     fn test_orientation_mismatch() {
         assert!(
             Mesh::from_oriented_faces(
-                octahedron_vertices(),
-                octahedron_faces().into_iter().skip(1).chain([vec![0, 2, 1]])
+                octa_vert_names(),
+                octa_faces().into_iter().skip(1).chain([vec![0, 2, 1]])
             ).is_err()
         );
     }
@@ -569,11 +619,11 @@ mod test {
     #[test]
     fn test_vertices_method() {
         let mesh = Mesh::from_oriented_faces(
-            octahedron_vertices(),
-            octahedron_faces()
+            octa_vert_names(),
+            octa_faces()
         ).unwrap();
 
-        assert_eq!(mesh.vertices(), &octahedron_vertices());
+        assert_eq!(mesh.vertices(), &octa_vert_names());
     }
 
     #[test]
@@ -621,11 +671,77 @@ mod test {
     #[test]
     fn test_map_vertices() {
         let octa = Mesh::from_oriented_faces(
-            octahedron_vertices(), octahedron_faces()
+            octa_vert_names(), octa_faces()
         ).unwrap();
 
         let mapped = octa.map_vertices(|v| v[..2].to_uppercase()).unwrap();
 
         assert_eq!(mapped.vertices(), &["FR", "RI", "TO", "BA", "LE", "BO"]);
+    }
+
+    #[test]
+    fn test_subdivide() {
+        let octa = Mesh::from_oriented_faces(
+            octa_vert_pos().iter().map(|p| p * 6.0).collect::<Vec<_>>(),
+            octa_faces()
+        ).unwrap();
+
+        let sub = octa.subdivide(|vs| Point3::centroid(vs));
+
+        assert_eq!(sub.vertices().len(), 26);
+        assert_eq!(sub.edge_indices().len(), 48);
+        assert_eq!(sub.face_indices().len(), 24);
+
+        assert_eq!(
+            sub.face_indices().iter()
+                .map(Vec::len)
+                .collect::<Vec<_>>(),
+            &[4; 24]
+        );
+
+        assert_eq!(
+            sub.face_indices().iter()
+                .map(|f| f.iter().filter(|&&v| v < 6).count())
+                .collect::<Vec<_>>(),
+            &[1; 24]
+        );
+
+        assert_eq!(
+            sub.face_indices().iter()
+                .map(|f| f.iter().filter(|&&v| v < 18).count())
+                .collect::<Vec<_>>(),
+            &[3; 24]
+        );
+
+        for p in [
+            point3(-6.0,  0.0,  0.0),
+            point3(-3.0, -3.0,  0.0),
+            point3(-3.0,  0.0, -3.0),
+            point3(-3.0,  0.0,  3.0),
+            point3(-3.0,  3.0,  0.0),
+            point3(-2.0, -2.0, -2.0),
+            point3(-2.0, -2.0,  2.0),
+            point3(-2.0,  2.0, -2.0),
+            point3(-2.0,  2.0,  2.0),
+            point3( 0.0, -6.0,  0.0),
+            point3( 0.0, -3.0, -3.0),
+            point3( 0.0, -3.0,  3.0),
+            point3( 0.0,  0.0, -6.0),
+            point3( 0.0,  0.0,  6.0),
+            point3( 0.0,  3.0, -3.0),
+            point3( 0.0,  3.0,  3.0),
+            point3( 0.0,  6.0,  0.0),
+            point3( 2.0, -2.0, -2.0),
+            point3( 2.0, -2.0,  2.0),
+            point3( 2.0,  2.0, -2.0),
+            point3( 2.0,  2.0,  2.0),
+            point3( 3.0, -3.0,  0.0),
+            point3( 3.0,  0.0, -3.0),
+            point3( 3.0,  0.0,  3.0),
+            point3( 3.0,  3.0,  0.0),
+            point3( 6.0,  0.0,  0.0),
+        ] {
+            assert!(sub.vertices().contains(&p));
+        }
     }
 }
