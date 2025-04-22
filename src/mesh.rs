@@ -163,14 +163,12 @@ impl<T> Mesh<T> {
     pub fn face_indices(&self) -> Vec<Vec<usize>> {
         self.along_face.iter()
             .map(|&e| self.vertices_in_face(e))
-            .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
 
     pub fn boundary_indices(&self) -> Vec<Vec<usize>> {
         self.along_boundary_component.iter()
             .map(|&e| self.vertices_in_face(e))
-            .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
 
@@ -194,7 +192,6 @@ impl<T> Mesh<T> {
     pub fn neighbor_indices(&self) -> Vec<Vec<usize>> {
         self.at_vertex.iter()
             .map(|&e| self.vertex_neighbors(e))
-            .collect::<BTreeSet<_>>().into_iter()
             .collect()
     }
 
@@ -270,7 +267,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
 
             if !sub_boundary.contains(&k) {
                 let points: Vec<_> = sub_mesh.neighbor_indices()[k].iter()
-                    .map(|&v| vertices_out[v])
+                    .map(|&v| sub_mesh.vertices()[v])
                     .collect();
 
                 vertices_out[k] = Point3::centroid(&points);
@@ -489,7 +486,9 @@ mod test {
         );
 
         assert_eq!(
-            octa.face_indices(),
+            octa.face_indices().into_iter()
+                .collect::<BTreeSet<_>>().into_iter()
+                .collect::<Vec<_>>(),
             [
                 [ 0, 1, 2 ],
                 [ 0, 2, 4 ],
@@ -507,12 +506,12 @@ mod test {
         assert_eq!(
             octa.neighbor_indices(),
             [
+                [ 1, 2, 4, 5 ],
+                [ 0, 5, 3, 2 ],
                 [ 0, 1, 3, 4 ],
+                [ 1, 5, 4, 2 ],
                 [ 0, 2, 3, 5 ],
                 [ 0, 4, 3, 1 ],
-                [ 0, 5, 3, 2 ],
-                [ 1, 2, 4, 5 ],
-                [ 1, 5, 4, 2 ],
             ]
         );
     }
@@ -550,7 +549,9 @@ mod test {
         );
 
         assert_eq!(
-            octa.face_indices(),
+            octa.face_indices().into_iter()
+                .collect::<BTreeSet<_>>().into_iter()
+                .collect::<Vec<_>>(),
             [
                 [ 0, 2, 4 ],
                 [ 0, 4, 5 ],
@@ -566,12 +567,12 @@ mod test {
         assert_eq!(
             octa.neighbor_indices(),
             [
+                [ 1, 2, 4, 5 ],
+                [ 0, 5, 3, 2 ],
                 [ 0, 1, 3, 4 ],
+                [ 1, 5, 4, 2 ],
                 [ 0, 2, 3, 5 ],
                 [ 0, 4, 3, 1 ],
-                [ 0, 5, 3, 2 ],
-                [ 1, 2, 4, 5 ],
-                [ 1, 5, 4, 2 ],
             ]
         );
     }
@@ -721,7 +722,9 @@ mod test {
 
         assert_eq!(mesh.vertices(), &['a', 'b', 'c', 'd', 'e', 'f']);
         assert_eq!(
-            mesh.face_indices(),
+            mesh.face_indices().into_iter()
+                .collect::<BTreeSet<_>>().into_iter()
+                .collect::<Vec<_>>(),
             [
                 [0, 1, 4],
                 [0, 2, 1],
@@ -747,7 +750,7 @@ mod test {
     }
 
     #[test]
-    fn test_subdivide() {
+    fn test_quadrangulate() {
         let octa = Mesh::from_oriented_faces(
             octa_vert_pos().iter().map(|p| p * 6.0).collect::<Vec<_>>(),
             octa_faces()
@@ -807,6 +810,47 @@ mod test {
         ] {
             assert!(sub.vertices().contains(&p));
             assert!(sub.vertices().contains(&(p * -1.0)));
+        }
+    }
+
+    #[test]
+    fn test_subd() {
+        let octa = Mesh::from_oriented_faces(
+            octa_vert_pos().iter().map(|p| p * 12.0).collect::<Vec<_>>(),
+            octa_faces()
+        ).unwrap();
+
+        let quad = octa.quadrangulate(|vs| Point3::centroid(vs));
+        let subd = octa.subd();
+
+        assert_eq!(quad.face_indices(), subd.face_indices());
+
+        for (i, ns) in subd.neighbor_indices().iter().enumerate() {
+            println!("{i}: {ns:?}");
+        }
+        println!();
+
+        for (i, v) in subd.vertices().iter().enumerate() {
+            println!("{i}: {v:?}");
+        }
+
+        for p in [
+            point3( 0.0,  0.0,  7.0),
+            point3( 0.0,  5.0, -5.0),
+            point3( 0.0,  5.0,  5.0),
+            point3( 0.0,  7.0,  0.0),
+            point3( 4.0, -4.0, -4.0),
+            point3( 4.0, -4.0,  4.0),
+            point3( 4.0,  4.0, -4.0),
+            point3( 4.0,  4.0,  4.0),
+            point3( 5.0, -5.0,  0.0),
+            point3( 5.0,  0.0, -5.0),
+            point3( 5.0,  0.0,  5.0),
+            point3( 5.0,  5.0,  0.0),
+            point3( 7.0,  0.0,  0.0),
+        ] {
+            assert!(subd.vertices().contains(&p));
+            assert!(subd.vertices().contains(&(p * -1.0)));
         }
     }
 }
