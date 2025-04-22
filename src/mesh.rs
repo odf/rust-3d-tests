@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use cgmath::{EuclideanSpace, Point3};
+
 
 type OrientedEdge = (usize, usize);
 
@@ -214,14 +216,11 @@ impl<T: Clone> Mesh<T> {
             self.face_indices().iter().flat_map(triangulate)
         )
     }
-}
 
-
-impl<T: Clone> Mesh<T> {
-    pub fn subdivide(&self, compose: impl Fn(&Vec<T>) -> T) -> Self {
+    pub fn quadrangulate(&self, compose: impl Fn(&Vec<T>) -> T) -> Self {
         let vertices = self.vertices();
         let edges = self.edge_indices();
-        let nr_vertices = self.vertices().len();
+        let nr_vertices = vertices.len();
         let nr_edges = edges.len();
 
         let mid_point_index: BTreeMap<_, _> = edges.iter().enumerate()
@@ -250,6 +249,74 @@ impl<T: Clone> Mesh<T> {
         }
 
         Self::from_oriented_faces_unchecked(verts_out, faces_out)
+    }
+}
+
+
+impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
+    pub fn subd(&self) -> Self {
+        let nr_vertices = self.vertices().len();
+        let nr_edges = self.edge_indices().len();
+
+        let sub_mesh = self.quadrangulate(|vs| Point3::centroid(vs));
+
+        let mut vertices_out = sub_mesh.vertices().clone();
+
+        let sub_boundary: BTreeSet<_> = sub_mesh.boundary_indices().iter()
+            .flatten().cloned().collect();
+
+        for i in 0..nr_edges {
+            let k = i + nr_vertices;
+
+            if !sub_boundary.contains(&k) {
+                let points: Vec<_> = sub_mesh.neighbor_indices()[k].iter()
+                    .map(|&v| vertices_out[v])
+                    .collect();
+
+                vertices_out[k] = Point3::centroid(&points);
+            }
+        }
+
+        for k in 0..nr_vertices {
+            let pos_in = vertices_out[k];
+            let neighbors = sub_mesh.neighbor_indices()[k].clone();
+
+            if sub_boundary.contains(&k) {
+                let points: Vec<_> = neighbors.iter()
+                    .filter(|&v| sub_boundary.contains(&v))
+                    .map(|&v| sub_mesh.vertices()[v])
+                    .collect();
+
+                vertices_out[k] = Point3::centroid(&[
+                    Point3::centroid(&points),
+                    pos_in
+                ]);
+            } else {
+                let edge_centers: Vec<_> = neighbors.iter()
+                    .map(|&v| sub_mesh.vertices()[v])
+                    .collect();
+
+                let edge_points: Vec<_> = neighbors.iter()
+                    .map(|&v| vertices_out[v])
+                    .collect();
+
+                let s = |n: usize| S::from(n).unwrap();
+
+                vertices_out[k] = Point3::from_vec(
+                    (
+                        pos_in.to_vec() * s(neighbors.len() - 3)
+                        + Point3::centroid(&edge_centers).to_vec()
+                        + Point3::centroid(&edge_points).to_vec() * s(2)
+                    )
+                    / s(neighbors.len())
+                );
+            }
+        }
+
+        Mesh::from_oriented_faces_unchecked(
+            vertices_out,
+            sub_mesh.face_indices(),
+        )
     }
 }
 
@@ -686,7 +753,7 @@ mod test {
             octa_faces()
         ).unwrap();
 
-        let sub = octa.subdivide(|vs| Point3::centroid(vs));
+        let sub = octa.quadrangulate(|vs| Point3::centroid(vs));
 
         assert_eq!(sub.vertices().len(), 26);
         assert_eq!(sub.edge_indices().len(), 48);
