@@ -1,3 +1,4 @@
+use cgmath::{point3, EuclideanSpace, Point3};
 use three_d_asset as asset;
 use three_d::Geometry;
 
@@ -17,7 +18,7 @@ pub fn main() {
 
     let mut camera = three_d::Camera::new_perspective(
         window.viewport(),
-        asset::vec3(0.0, 2.0, 8.0),
+        asset::vec3(0.0, 1.0, 4.0),
         asset::vec3(0.0, 0.0, 0.0),
         asset::vec3(0.0, 1.0, 0.0),
         asset::degrees(25.0),
@@ -28,7 +29,7 @@ pub fn main() {
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
         //three_d::Mesh::new(&context, &tetra_mesh()),
-        three_d::Mesh::new(&context, &cube_mesh()),
+        three_d::Mesh::new(&context, &octa_mesh().subd().subd().to_cpu_mesh()),
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
             metallic: 0.0,
@@ -70,13 +71,13 @@ pub fn main() {
 }
 
 
-fn tetra_mesh() -> three_d::CpuMesh {
+fn tetra_mesh() -> Mesh<Point3<f64>> {
     Mesh::from_oriented_faces(
         [
-            ( 1.0,  1.0,  1.0),
-            ( 1.0, -1.0, -1.0),
-            (-1.0,  1.0, -1.0),
-            (-1.0, -1.0,  1.0)
+            point3( 1.0,  1.0,  1.0),
+            point3( 1.0, -1.0, -1.0),
+            point3(-1.0,  1.0, -1.0),
+            point3(-1.0, -1.0,  1.0)
         ],
         [
             [0, 1, 2],
@@ -86,21 +87,20 @@ fn tetra_mesh() -> three_d::CpuMesh {
         ]
     )
         .unwrap()
-        .to_cpu_mesh()
 }
 
 
-fn cube_mesh() -> three_d::CpuMesh {
+fn cube_mesh() -> Mesh<Point3<f64>> {
     Mesh::from_oriented_faces(
         [
-            ( 1.0,  1.0,  1.0), // 0
-            ( 1.0,  1.0, -1.0), // 1
-            ( 1.0, -1.0,  1.0), // 2
-            ( 1.0, -1.0, -1.0), // 3
-            (-1.0,  1.0,  1.0), // 4
-            (-1.0,  1.0, -1.0), // 5
-            (-1.0, -1.0,  1.0), // 6
-            (-1.0, -1.0, -1.0), // 7
+            point3( 1.0,  1.0,  1.0), // 0
+            point3( 1.0,  1.0, -1.0), // 1
+            point3( 1.0, -1.0,  1.0), // 2
+            point3( 1.0, -1.0, -1.0), // 3
+            point3(-1.0,  1.0,  1.0), // 4
+            point3(-1.0,  1.0, -1.0), // 5
+            point3(-1.0, -1.0,  1.0), // 6
+            point3(-1.0, -1.0, -1.0), // 7
         ],
         [
             [0, 4, 6, 2],
@@ -112,7 +112,31 @@ fn cube_mesh() -> three_d::CpuMesh {
         ]
     )
         .unwrap()
-        .to_cpu_mesh()
+}
+
+
+fn octa_mesh() -> Mesh<cgmath::Point3<f64>>  {
+    Mesh::from_oriented_faces(
+        [
+            point3( 1.0,  0.0,  0.0),
+            point3( 0.0,  1.0,  0.0),
+            point3( 0.0,  0.0,  1.0),
+            point3(-1.0,  0.0,  0.0),
+            point3( 0.0, -1.0,  0.0),
+            point3( 0.0,  0.0, -1.0),
+        ],
+        [
+            [ 0, 1, 2 ],
+            [ 1, 0, 5 ],
+            [ 2, 1, 3 ],
+            [ 0, 2, 4 ],
+            [ 3, 5, 4 ],
+            [ 5, 3, 1 ],
+            [ 4, 5, 0 ],
+            [ 3, 4, 2 ],
+        ]
+    )
+        .unwrap()
 }
 
 
@@ -121,12 +145,12 @@ trait ToCpuMesh {
 }
 
 
-impl ToCpuMesh for Mesh<(f32, f32, f32)> {
+impl ToCpuMesh for Mesh<Point3<f64>> {
     fn to_cpu_mesh(&self) -> three_d::CpuMesh {
         let trimesh = self.triangulate().unwrap();
 
         let positions: Vec<_> = trimesh.vertices().iter()
-            .map(|&(x, y, z)| asset::vec3(x, y, z))
+            .map(|&p| p.to_vec())
             .collect();
 
         let indices: Vec<_> = trimesh.face_indices().iter()
@@ -135,7 +159,7 @@ impl ToCpuMesh for Mesh<(f32, f32, f32)> {
             .collect();
 
         let mut mesh = three_d::CpuMesh {
-            positions: asset::Positions::F32(positions),
+            positions: asset::Positions::F64(positions),
             indices: asset::Indices::U32(indices),
             ..Default::default()
         };
