@@ -252,68 +252,45 @@ impl<T: Clone> Mesh<T> {
 
 impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
     pub fn subd(&self) -> Self {
-        let nr_vertices = self.vertices().len();
-        let nr_edges = self.edge_indices().len();
-
         let sub_mesh = self.quadrangulate(|vs| Point3::centroid(vs));
+        let vertices_tmp = sub_mesh.vertices();
 
         let mut vertices_out = sub_mesh.vertices().clone();
 
-        let sub_boundary: BTreeSet<_> = sub_mesh.boundary_indices().iter()
+        let bnd: BTreeSet<_> = sub_mesh.boundary_indices().iter()
             .flatten().cloned().collect();
 
-        for i in 0..nr_edges {
-            let k = i + nr_vertices;
+        for i in 0..self.edge_indices().len() {
+            let k = i + self.vertices().len();
 
-            if !sub_boundary.contains(&k) {
-                let points: Vec<_> = sub_mesh.neighbor_indices()[k].iter()
-                    .map(|&v| sub_mesh.vertices()[v])
-                    .collect();
-
-                vertices_out[k] = Point3::centroid(&points);
+            if !bnd.contains(&k) {
+                let nbs = sub_mesh.neighbor_indices()[k].clone();
+                vertices_out[k] = indexed_centroid(&vertices_tmp, nbs);
             }
         }
 
-        for k in 0..nr_vertices {
+        for k in 0..self.vertices().len() {
             let pos_in = vertices_out[k];
-            let neighbors = sub_mesh.neighbor_indices()[k].clone();
+            let nbs = sub_mesh.neighbor_indices()[k].clone();
 
-            if sub_boundary.contains(&k) {
-                let points: Vec<_> = neighbors.iter()
-                    .filter(|&v| sub_boundary.contains(&v))
-                    .map(|&v| sub_mesh.vertices()[v])
-                    .collect();
-
-                vertices_out[k] = Point3::centroid(&[
-                    Point3::centroid(&points),
-                    pos_in
-                ]);
+            if bnd.contains(&k) {
+                let nbs_bnd = nbs.iter().filter(|v| bnd.contains(v)).cloned();
+                let c = indexed_centroid(&vertices_tmp, nbs_bnd);
+                vertices_out[k] = Point3::centroid(&[c, pos_in]);
             } else {
-                let edge_centers: Vec<_> = neighbors.iter()
-                    .map(|&v| sub_mesh.vertices()[v])
-                    .collect();
-
-                let edge_points: Vec<_> = neighbors.iter()
-                    .map(|&v| vertices_out[v])
-                    .collect();
-
+                let c1 = indexed_centroid(&vertices_tmp, nbs.clone()).to_vec();
+                let c2 = indexed_centroid(&vertices_out, nbs.clone()).to_vec();
                 let s = |n: usize| S::from(n).unwrap();
 
                 vertices_out[k] = Point3::from_vec(
-                    (
-                        pos_in.to_vec() * s(neighbors.len() - 3)
-                        + Point3::centroid(&edge_centers).to_vec()
-                        + Point3::centroid(&edge_points).to_vec() * s(2)
-                    )
-                    / s(neighbors.len())
+                    (pos_in.to_vec() * s(nbs.len() - 3) + c1 + c2 * s(2))
+                    / s(nbs.len())
                 );
             }
         }
 
-        Mesh::from_oriented_faces_unchecked(
-            vertices_out,
-            sub_mesh.face_indices(),
-        )
+        let faces = sub_mesh.face_indices();
+        Mesh::from_oriented_faces_unchecked(vertices_out, faces)
     }
 }
 
@@ -401,6 +378,19 @@ fn all_unique<T: Ord, I: IntoIterator<Item=T>>(items: I) -> bool {
     }
 
     true
+}
+
+
+fn indexed_centroid<S: cgmath::BaseNum, I: IntoIterator<Item=usize>>(
+    positions: &Vec<cgmath::Point3<S>>,
+    indices: I
+) -> Point3<S>
+{
+    Point3::centroid(
+        &indices.into_iter()
+            .map(|v| positions[v])
+            .collect::<Vec<_>>()
+    )
 }
 
 
