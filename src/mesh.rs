@@ -252,6 +252,8 @@ impl<T: Clone> Mesh<T> {
 
 impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
     pub fn subd(&self) -> Self {
+        let nr_verts = self.vertices().len();
+        let nr_edges = self.edge_indices().len();
         let sub_mesh = self.quadrangulate(|vs| Point3::centroid(vs));
         let vertices_tmp = sub_mesh.vertices();
 
@@ -260,16 +262,16 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
         let bnd: BTreeSet<_> = sub_mesh.boundary_indices().iter()
             .flatten().cloned().collect();
 
-        for i in 0..self.edge_indices().len() {
-            let k = i + self.vertices().len();
-
+        // adjust edge-point positions for those not on the boundary
+        for k in nr_verts..(nr_verts + nr_edges) {
             if !bnd.contains(&k) {
                 let nbs = sub_mesh.neighbor_indices()[k].clone();
                 vertices_out[k] = indexed_centroid(&vertices_tmp, nbs);
             }
         }
 
-        for k in 0..self.vertices().len() {
+        // adjust the positions of the original vertices
+        for k in 0..nr_verts {
             let pos_in = vertices_out[k];
             let nbs = sub_mesh.neighbor_indices()[k].clone();
 
@@ -841,6 +843,112 @@ mod test {
         ] {
             assert!(subd.vertices().contains(&p));
             assert!(subd.vertices().contains(&(p * -1.0)));
+        }
+    }
+
+    #[test]
+    fn test_subd_with_boundary_1() {
+        let mesh = Mesh::from_oriented_faces(
+            [
+                point3( 0.0, 0.0, 0.0), // 0
+                point3( 8.0, 0.0, 0.0), // 1
+                point3(16.0, 0.0, 0.0), // 2
+                point3( 0.0, 8.0, 0.0), // 3
+                point3( 8.0, 8.0, 0.0), // 4
+                point3(16.0, 8.0, 0.0), // 5
+            ],
+            [
+                [0, 1, 4, 3],
+                [1, 2, 5, 4],
+            ]
+        ).unwrap();
+
+        let quad = mesh.quadrangulate(|vs| Point3::centroid(vs));
+        let subd = mesh.subd();
+
+        assert_eq!(quad.face_indices(), subd.face_indices());
+        assert_eq!(subd.vertices().len(), 15);
+
+        for p in [
+            point3( 0.0, 4.0, 0.0),
+            point3( 1.0, 1.0, 0.0),
+            point3( 1.0, 7.0, 0.0),
+            point3( 4.0, 0.0, 0.0),
+            point3( 4.0, 4.0, 0.0),
+            point3( 4.0, 8.0, 0.0),
+            point3( 8.0, 0.0, 0.0),
+            point3( 8.0, 4.0, 0.0),
+            point3( 8.0, 8.0, 0.0),
+            point3(12.0, 0.0, 0.0),
+            point3(12.0, 4.0, 0.0),
+            point3(12.0, 8.0, 0.0),
+            point3(15.0, 1.0, 0.0),
+            point3(15.0, 7.0, 0.0),
+            point3(16.0, 4.0, 0.0),
+        ] {
+            assert!(subd.vertices().contains(&p));
+        }
+    }
+
+    #[test]
+    fn test_subd_with_boundary_2() {
+        let mesh = Mesh::from_oriented_faces(
+            [
+                point3( 0.0,  0.0, 0.0), // 0
+                point3( 8.0,  0.0, 0.0), // 1
+                point3(16.0,  0.0, 0.0), // 2
+                point3( 0.0,  8.0, 0.0), // 3
+                point3( 8.0,  8.0, 0.0), // 4
+                point3(16.0,  8.0, 0.0), // 5
+                point3( 0.0, 16.0, 0.0), // 6
+                point3( 8.0, 16.0, 0.0), // 7
+                point3(16.0, 16.0, 0.0), // 8
+            ],
+            [
+                [0, 1, 4, 3],
+                [1, 2, 5, 4],
+                [3, 4, 7, 6],
+                [4, 5, 8, 7],
+            ]
+        ).unwrap();
+
+        let quad = mesh.quadrangulate(|vs| Point3::centroid(vs));
+        let subd = mesh.subd();
+
+        assert_eq!(quad.face_indices(), subd.face_indices());
+        assert_eq!(subd.vertices().len(), 25);
+        assert_eq!(subd.edge_indices().len(), 40);
+        assert_eq!(subd.boundary_indices().len(), 1);
+        assert_eq!(subd.boundary_indices()[0].len(), 16);
+
+        for p in [
+            point3( 0.0,  4.0, 0.0),
+            point3( 0.0,  8.0, 0.0),
+            point3( 0.0, 12.0, 0.0),
+            point3( 1.0,  1.0, 0.0),
+            point3( 1.0, 15.0, 0.0),
+            point3( 4.0,  0.0, 0.0),
+            point3( 4.0,  4.0, 0.0),
+            point3( 4.0,  8.0, 0.0),
+            point3( 4.0, 12.0, 0.0),
+            point3( 4.0, 16.0, 0.0),
+            point3( 8.0,  0.0, 0.0),
+            point3( 8.0,  4.0, 0.0),
+            point3( 8.0,  8.0, 0.0),
+            point3( 8.0, 12.0, 0.0),
+            point3( 8.0, 16.0, 0.0),
+            point3(12.0,  0.0, 0.0),
+            point3(12.0,  4.0, 0.0),
+            point3(12.0,  8.0, 0.0),
+            point3(12.0, 12.0, 0.0),
+            point3(12.0, 16.0, 0.0),
+            point3(15.0,  1.0, 0.0),
+            point3(15.0, 15.0, 0.0),
+            point3(16.0,  4.0, 0.0),
+            point3(16.0,  8.0, 0.0),
+            point3(16.0, 12.0, 0.0),
+        ] {
+            assert!(subd.vertices().contains(&p));
         }
     }
 }
