@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use cgmath::{EuclideanSpace, Point3};
+use cgmath::{point3, EuclideanSpace, Point3};
 
 
 type OrientedEdge = (usize, usize);
@@ -293,6 +293,95 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
 
         let faces = sub_mesh.face_indices();
         Mesh::from_oriented_faces_unchecked(vertices_out, faces)
+    }
+
+    pub fn tightened(&self, fix_boundary: bool) -> Self {
+        let pos = self.vertices();
+        let n = pos.len();
+
+        let mut px = vec![0.0; n];
+        let mut py = vec![0.0; n];
+        let mut pz = vec![0.0; n];
+        for v in 0..n {
+            px[v] = pos[v].x.to_f64().unwrap();
+            py[v] = pos[v].y.to_f64().unwrap();
+            pz[v] = pos[v].z.to_f64().unwrap();
+        }
+
+        let mut fixed = vec![false; n];
+        if fix_boundary {
+            for bnd in self.boundary_indices() {
+                for v in bnd {
+                    fixed[v] = true;
+                }
+            }
+        }
+
+        let mut gx = vec![0.0; n];
+        let mut gy = vec![0.0; n];
+        let mut gz = vec![0.0; n];
+
+        let f1 = 0.1;
+        let f2 = 0.05;
+
+        for _ in 0..100 {
+            for v in 0..n {
+                gx[v] = 0.0;
+                gy[v] = 0.0;
+                gz[v] = 0.0;
+            }
+
+            for f in self.face_indices() {
+                let m = f.len();
+
+                for k in 0..m {
+                    let u = f[k];
+                    let v = f[(k + 1) % m];
+                    let w = f[(k + 2) % m];
+
+                    let ax = px[u] - px[v];
+                    let ay = py[u] - py[v];
+                    let az = pz[u] - pz[v];
+
+                    let bx = px[w] - px[v];
+                    let by = py[w] - py[v];
+                    let bz = pz[w] - pz[v];
+
+                    let cx = px[w] - px[u];
+                    let cy = py[w] - py[u];
+                    let cz = pz[w] - pz[u];
+
+                    let nx = by * az - bz * ay;
+                    let ny = bz * ax - bx * az;
+                    let nz = bx * ay - by * ax;
+
+                    let nl = (nx * nx + ny * ny + nz * nz).sqrt().max(1e-6);
+
+                    gx[v] += (ny * cz - nz * cy) / nl + f1 * (ax + bx);
+                    gy[v] += (nz * cx - nx * cz) / nl + f1 * (ay + by);
+                    gz[v] += (nx * cy - ny * cx) / nl + f1 * (az + bz);
+                }
+            }
+
+            for v in 0..n {
+                if !fixed[v] {
+                    px[v] += f2 * gx[v];
+                    py[v] += f2 * gy[v];
+                    pz[v] += f2 * gz[v];
+                }
+            }
+        }
+
+        let mut pos_out = vec![];
+        for v in 0..n {
+            pos_out.push(point3(
+                S::from(px[v]).unwrap(),
+                S::from(py[v]).unwrap(),
+                S::from(pz[v]).unwrap(),
+            ))
+        }
+
+        Mesh::from_oriented_faces_unchecked(pos_out, self.face_indices())
     }
 }
 

@@ -30,7 +30,11 @@ pub fn main() {
     let mut model = three_d::Gm::new(
         three_d::Mesh::new(
             &context,
-            &saddle_mesh().subd(true).subd(true).subd(true).to_cpu_mesh()
+            &saddle_mesh()
+                .subd(true).tightened(true)
+                .subd(true).tightened(true)
+                .subd(true).tightened(true)
+                .to_cpu_mesh()
         ),
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
