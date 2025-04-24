@@ -251,7 +251,7 @@ impl<T: Clone> Mesh<T> {
 
 
 impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
-    pub fn subd(&self) -> Self {
+    pub fn subd(&self, fix_boundary: bool) -> Self {
         let nr_verts = self.vertices().len();
         let nr_edges = self.edge_indices().len();
         let sub_mesh = self.quadrangulate(|vs| Point3::centroid(vs));
@@ -275,11 +275,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
             let pos_in = vertices_out[k];
             let nbs = sub_mesh.neighbor_indices()[k].clone();
 
-            if bnd.contains(&k) {
-                let nbs_bnd = nbs.iter().filter(|v| bnd.contains(v)).cloned();
-                let c = indexed_centroid(&vertices_tmp, nbs_bnd);
-                vertices_out[k] = Point3::centroid(&[c, pos_in]);
-            } else {
+            if !bnd.contains(&k) {
                 let c1 = indexed_centroid(&vertices_tmp, nbs.clone()).to_vec();
                 let c2 = indexed_centroid(&vertices_out, nbs.clone()).to_vec();
                 let s = |n: usize| S::from(n).unwrap();
@@ -288,6 +284,10 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
                     (pos_in.to_vec() * s(nbs.len() - 3) + c1 + c2 * s(2))
                     / s(nbs.len())
                 );
+            } else if !fix_boundary {
+                let nbs_bnd = nbs.iter().filter(|v| bnd.contains(v)).cloned();
+                let c = indexed_centroid(&vertices_tmp, nbs_bnd);
+                vertices_out[k] = Point3::centroid(&[c, pos_in]);
             }
         }
 
@@ -813,7 +813,7 @@ mod test {
         ).unwrap();
 
         let quad = octa.quadrangulate(|vs| Point3::centroid(vs));
-        let subd = octa.subd();
+        let subd = octa.subd(false);
 
         assert_eq!(quad.face_indices(), subd.face_indices());
 
@@ -864,7 +864,7 @@ mod test {
         ).unwrap();
 
         let quad = mesh.quadrangulate(|vs| Point3::centroid(vs));
-        let subd = mesh.subd();
+        let subd = mesh.subd(false);
 
         assert_eq!(quad.face_indices(), subd.face_indices());
         assert_eq!(subd.vertices().len(), 15);
@@ -884,6 +884,50 @@ mod test {
             point3(12.0, 8.0, 0.0),
             point3(15.0, 1.0, 0.0),
             point3(15.0, 7.0, 0.0),
+            point3(16.0, 4.0, 0.0),
+        ] {
+            assert!(subd.vertices().contains(&p));
+        }
+    }
+
+    #[test]
+    fn test_subd_with_fixed_boundary_1() {
+        let mesh = Mesh::from_oriented_faces(
+            [
+                point3( 0.0, 0.0, 0.0), // 0
+                point3( 8.0, 0.0, 0.0), // 1
+                point3(16.0, 0.0, 0.0), // 2
+                point3( 0.0, 8.0, 0.0), // 3
+                point3( 8.0, 8.0, 0.0), // 4
+                point3(16.0, 8.0, 0.0), // 5
+            ],
+            [
+                [0, 1, 4, 3],
+                [1, 2, 5, 4],
+            ]
+        ).unwrap();
+
+        let quad = mesh.quadrangulate(|vs| Point3::centroid(vs));
+        let subd = mesh.subd(true);
+
+        assert_eq!(quad.face_indices(), subd.face_indices());
+        assert_eq!(subd.vertices().len(), 15);
+
+        for p in [
+            point3( 0.0, 4.0, 0.0),
+            point3( 0.0, 0.0, 0.0),
+            point3( 0.0, 8.0, 0.0),
+            point3( 4.0, 0.0, 0.0),
+            point3( 4.0, 4.0, 0.0),
+            point3( 4.0, 8.0, 0.0),
+            point3( 8.0, 0.0, 0.0),
+            point3( 8.0, 4.0, 0.0),
+            point3( 8.0, 8.0, 0.0),
+            point3(12.0, 0.0, 0.0),
+            point3(12.0, 4.0, 0.0),
+            point3(12.0, 8.0, 0.0),
+            point3(16.0, 0.0, 0.0),
+            point3(16.0, 8.0, 0.0),
             point3(16.0, 4.0, 0.0),
         ] {
             assert!(subd.vertices().contains(&p));
@@ -913,7 +957,7 @@ mod test {
         ).unwrap();
 
         let quad = mesh.quadrangulate(|vs| Point3::centroid(vs));
-        let subd = mesh.subd();
+        let subd = mesh.subd(false);
 
         assert_eq!(quad.face_indices(), subd.face_indices());
         assert_eq!(subd.vertices().len(), 25);

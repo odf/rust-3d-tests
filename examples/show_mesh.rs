@@ -18,7 +18,7 @@ pub fn main() {
 
     let mut camera = three_d::Camera::new_perspective(
         window.viewport(),
-        asset::vec3(0.0, 1.0, 4.0),
+        asset::vec3(0.0, 2.0, 8.0),
         asset::vec3(0.0, 0.0, 0.0),
         asset::vec3(0.0, 1.0, 0.0),
         asset::degrees(25.0),
@@ -28,8 +28,10 @@ pub fn main() {
 
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
-        //three_d::Mesh::new(&context, &tetra_mesh()),
-        three_d::Mesh::new(&context, &octa_mesh().subd().subd().to_cpu_mesh()),
+        three_d::Mesh::new(
+            &context,
+            &saddle_mesh().subd(true).subd(true).subd(true).to_cpu_mesh()
+        ),
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
             metallic: 0.0,
@@ -109,6 +111,30 @@ fn cube_mesh() -> Mesh<Point3<f64>> {
             [2, 6, 7, 3],
             [6, 4, 5, 7],
             [4, 0, 1, 5],
+        ]
+    )
+        .unwrap()
+}
+
+
+fn saddle_mesh() -> Mesh<Point3<f64>> {
+    Mesh::from_oriented_faces(
+        [
+            point3( 0.0,  0.0,  0.0), // 0
+            point3( 1.0,  1.0,  1.0), // 1
+            point3(-1.0,  1.0,  1.0), // 2
+            point3(-1.0, -1.0,  1.0), // 3
+            point3(-1.0, -1.0, -1.0), // 4
+            point3( 1.0, -1.0, -1.0), // 5
+            point3( 1.0,  1.0, -1.0), // 6
+        ],
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 4],
+            [0, 4, 5],
+            [0, 5, 6],
+            [0, 6, 1],
         ]
     )
         .unwrap()
