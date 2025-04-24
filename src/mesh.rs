@@ -276,18 +276,18 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
             let nbs = sub_mesh.neighbor_indices()[k].clone();
 
             if !bnd.contains(&k) {
-                let c1 = indexed_centroid(&vertices_tmp, nbs.clone()).to_vec();
-                let c2 = indexed_centroid(&vertices_out, nbs.clone()).to_vec();
-                let s = |n: usize| S::from(n).unwrap();
+                let c1 = indexed_centroid(&vertices_tmp, nbs.clone());
+                let c2 = indexed_centroid(&vertices_out, nbs.clone());
 
-                vertices_out[k] = Point3::from_vec(
-                    (pos_in.to_vec() * s(nbs.len() - 3) + c1 + c2 * s(2))
-                    / s(nbs.len())
+                vertices_out[k] = Point3::centroid(
+                    &vec![pos_in; nbs.len() - 3].iter()
+                        .chain([c1, c2, c2].iter())
+                        .cloned().collect::<Vec<_>>()
                 );
             } else if !fix_boundary {
                 let nbs_bnd = nbs.iter().filter(|v| bnd.contains(v)).cloned();
                 let c = indexed_centroid(&vertices_tmp, nbs_bnd);
-                vertices_out[k] = Point3::centroid(&[c, pos_in]);
+                vertices_out[k] = Point3::centroid(&[pos_in, c]);
             }
         }
 
