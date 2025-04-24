@@ -18,7 +18,6 @@ pub struct Mesh<T> {
     along_face: Vec<OrientedEdge>,
     along_boundary_component: Vec<OrientedEdge>,
     to_face: BTreeMap<OrientedEdge, usize>,
-    to_boundary_component: BTreeMap<OrientedEdge, usize>,
     next: BTreeMap<OrientedEdge, OrientedEdge>
 }
 
@@ -31,7 +30,6 @@ impl<T> Mesh<T> {
             along_face: vec![],
             along_boundary_component: vec![],
             to_face: BTreeMap::new(),
-            to_boundary_component: BTreeMap::new(),
             next: BTreeMap::new(),
         }
     }
@@ -93,7 +91,6 @@ impl<T> Mesh<T> {
             along_face,
             along_boundary_component,
             to_face,
-            to_boundary_component,
             next,
         }
     }
