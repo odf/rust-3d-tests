@@ -23,7 +23,7 @@ fn wrapper() {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    run();
+    build_mesh();
 
     if let Ok(report) = guard.report().build() {
         let file = std::fs::File::create("flamegraph.svg").unwrap();
@@ -53,16 +53,11 @@ fn run() {
         10.0,
     );
 
+    let mesh = build_mesh();
+
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
-        three_d::Mesh::new(
-            &context,
-            &saddle_mesh()
-                .subd(true).tightened(true)
-                .subd(true).tightened(true)
-                .subd(true).tightened(true)
-                .to_cpu_mesh()
-        ),
+        three_d::Mesh::new(&context, &mesh),
         three_d::PhysicalMaterial {
             albedo: asset::Srgba::BLUE,
             metallic: 0.0,
@@ -101,6 +96,16 @@ fn run() {
         // Ensures a valid return value.
         three_d::FrameOutput::default()
     });
+}
+
+
+fn build_mesh() -> three_d::CpuMesh {
+    saddle_mesh()
+        .subd(true).tightened(true)
+        .subd(true).tightened(true)
+        .subd(true).tightened(true)
+        .subd(true).tightened(true)
+        .to_cpu_mesh()
 }
 
 
