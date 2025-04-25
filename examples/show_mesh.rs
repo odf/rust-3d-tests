@@ -100,12 +100,11 @@ fn run() {
 
 
 fn build_mesh() -> three_d::CpuMesh {
-    saddle_mesh()
-        .subd(true).tightened(true)
-        .subd(true).tightened(true)
-        .subd(true).tightened(true)
-        .subd(true).tightened(true)
-        .to_cpu_mesh()
+    let mut mesh = saddle_mesh();
+    for _ in 0..4 {
+        mesh = mesh.subd(true).tightened(true);
+    }
+    mesh.to_cpu_mesh()
 }
 
 
