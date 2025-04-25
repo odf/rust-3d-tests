@@ -252,6 +252,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
         let nr_verts = self.vertices().len();
         let nr_edges = self.edge_indices().len();
         let sub_mesh = self.quadrangulate(|vs| Point3::centroid(vs));
+        let neighbor_indices = sub_mesh.neighbor_indices();
         let vertices_tmp = sub_mesh.vertices();
 
         let mut vertices_out = sub_mesh.vertices().clone();
@@ -262,7 +263,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
         // adjust edge-point positions for those not on the boundary
         for k in nr_verts..(nr_verts + nr_edges) {
             if !bnd.contains(&k) {
-                let nbs = sub_mesh.neighbor_indices()[k].clone();
+                let nbs = neighbor_indices[k].clone();
                 vertices_out[k] = indexed_centroid(&vertices_tmp, nbs);
             }
         }
@@ -270,7 +271,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
         // adjust the positions of the original vertices
         for k in 0..nr_verts {
             let pos_in = vertices_out[k];
-            let nbs = sub_mesh.neighbor_indices()[k].clone();
+            let nbs = neighbor_indices[k].clone();
 
             if !bnd.contains(&k) {
                 let c1 = indexed_centroid(&vertices_tmp, nbs.clone());
@@ -294,6 +295,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
 
     pub fn tightened(&self, fix_boundary: bool) -> Self {
         let pos = self.vertices();
+        let face_indices = self.face_indices();
         let n = pos.len();
 
         let mut px = vec![0.0; n];
@@ -328,7 +330,7 @@ impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
                 gz[v] = 0.0;
             }
 
-            for f in self.face_indices() {
+            for f in &face_indices {
                 let m = f.len();
 
                 for k in 0..m {
