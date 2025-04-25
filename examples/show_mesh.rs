@@ -5,7 +5,34 @@ use three_d::Geometry;
 use rust_3d_tests::mesh::Mesh;
 
 
-pub fn main() {
+fn main() {
+    wrapper();
+}
+
+
+#[cfg(not(feature = "pprof"))]
+fn wrapper() {
+    run();
+}
+
+
+#[cfg(feature = "pprof")]
+fn wrapper() {
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build().unwrap();
+
+    run();
+
+    if let Ok(report) = guard.report().build() {
+        let file = std::fs::File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    };
+}
+
+
+fn run() {
     // On the web, this creates a canvas instead.
     let window = three_d::Window::new(three_d::WindowSettings {
         title: "Rust 3d Test".to_string(),
