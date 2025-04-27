@@ -2,7 +2,7 @@ use cgmath::{point3, EuclideanSpace, Point3};
 use three_d_asset as asset;
 use three_d::Geometry;
 
-use rust_3d_tests::mesh::Mesh;
+use rust_3d_tests::mesh::{self, Mesh};
 
 
 fn main() {
@@ -53,7 +53,8 @@ fn run() {
         10.0,
     );
 
-    let mesh = build_mesh();
+    //let mesh = build_mesh();
+    let mesh = inset_test();
 
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
@@ -108,6 +109,82 @@ fn build_mesh() -> three_d::CpuMesh {
 }
 
 
+fn inset_test() -> three_d::CpuMesh {
+    let center = point3( 0.0,  0.0,  0.0);
+
+    let corners = [
+        point3( 1.0,  1.0,  1.0),
+        point3( 0.5,  1.0,  1.0),
+        point3( 0.0,  1.0,  1.0),
+        point3(-0.5,  1.0,  1.0),
+        point3(-1.0,  1.0,  1.0),
+        point3(-1.0,  0.0,  1.0),
+        point3(-1.0, -1.0,  1.0),
+        point3(-1.0, -1.0,  0.0),
+        point3(-1.0, -1.0, -1.0),
+        point3( 0.0, -1.0, -1.0),
+        point3( 1.0, -1.0, -1.0),
+        point3( 1.0,  0.0, -1.0),
+        point3( 1.0,  1.0, -1.0),
+        point3( 1.0,  1.0, -0.5),
+        point3( 1.0,  1.0,  0.0),
+        point3( 1.0,  1.0,  0.5),
+    ];
+
+    let n = corners.len();
+
+    let mut inset = vec![];
+    for i in 0..n {
+        let lft = corners[(i + n - 1) % n];
+        let mid = corners[i];
+        let rgt = corners[(i + 1) % n];
+
+        inset.push(mesh::inset_corner(mid, 0.1, lft, rgt, center));
+    }
+
+    let mut faces = vec![];
+    for i in 0..n {
+        let j = (i + 1) % n;
+        if i == 1 || i == 2 {
+            faces.push(vec![0, i + n + 1, j + n + 1]);
+        }
+        faces.push(vec![i + 1, j + 1, j + n + 1, i + n + 1]);
+    }
+
+    let vertices: Vec<_> = [center].iter()
+        .chain(corners.iter())
+        .chain(inset.iter())
+        .cloned()
+        .collect();
+
+    Mesh::from_oriented_faces(vertices, faces).unwrap().to_cpu_mesh()
+}
+
+
+fn saddle_mesh() -> Mesh<Point3<f64>> {
+    Mesh::from_oriented_faces(
+        [
+            point3( 0.0,  0.0,  0.0), // 0
+            point3( 1.0,  1.0,  1.0), // 1
+            point3(-1.0,  1.0,  1.0), // 2
+            point3(-1.0, -1.0,  1.0), // 3
+            point3(-1.0, -1.0, -1.0), // 4
+            point3( 1.0, -1.0, -1.0), // 5
+            point3( 1.0,  1.0, -1.0), // 6
+        ],
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 4],
+            [0, 4, 5],
+            [0, 5, 6],
+            [0, 6, 1],
+        ]
+    )
+        .unwrap()
+}
+
+
 fn tetra_mesh() -> Mesh<Point3<f64>> {
     Mesh::from_oriented_faces(
         [
@@ -146,30 +223,6 @@ fn cube_mesh() -> Mesh<Point3<f64>> {
             [2, 6, 7, 3],
             [6, 4, 5, 7],
             [4, 0, 1, 5],
-        ]
-    )
-        .unwrap()
-}
-
-
-fn saddle_mesh() -> Mesh<Point3<f64>> {
-    Mesh::from_oriented_faces(
-        [
-            point3( 0.0,  0.0,  0.0), // 0
-            point3( 1.0,  1.0,  1.0), // 1
-            point3(-1.0,  1.0,  1.0), // 2
-            point3(-1.0, -1.0,  1.0), // 3
-            point3(-1.0, -1.0, -1.0), // 4
-            point3( 1.0, -1.0, -1.0), // 5
-            point3( 1.0,  1.0, -1.0), // 6
-        ],
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
         ]
     )
         .unwrap()
