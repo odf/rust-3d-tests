@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use cgmath::{point3, EuclideanSpace, Point3};
+use cgmath::prelude::*;
+use cgmath::{point3, BaseFloat, Point3, Vector3};
 
 
 type OrientedEdge = (usize, usize);
@@ -247,7 +248,7 @@ impl<T: Clone> Mesh<T> {
 }
 
 
-impl<S: cgmath::BaseNum> Mesh<cgmath::Point3<S>> {
+impl<S: BaseFloat> Mesh<Point3<S>> {
     pub fn subd(&self, fix_boundary: bool) -> Self {
         let nr_verts = self.vertices().len();
         let nr_edges = self.edge_indices().len();
@@ -471,8 +472,8 @@ fn all_unique<T: Ord, I: IntoIterator<Item=T>>(items: I) -> bool {
 }
 
 
-fn indexed_centroid<S: cgmath::BaseNum, I: IntoIterator<Item=usize>>(
-    positions: &Vec<cgmath::Point3<S>>,
+fn indexed_centroid<S: BaseFloat, I: IntoIterator<Item=usize>>(
+    positions: &Vec<Point3<S>>,
     indices: I
 ) -> Point3<S>
 {
@@ -481,6 +482,39 @@ fn indexed_centroid<S: cgmath::BaseNum, I: IntoIterator<Item=usize>>(
             .map(|v| positions[v])
             .collect::<Vec<_>>()
     )
+}
+
+
+pub fn inset_corner<S: BaseFloat>(
+    corner: Point3<S>,
+    wd: S,
+    left: Point3<S>,
+    right: Point3<S>,
+    center: Point3<S>,
+) -> Point3<S>
+{
+    let norm = |v: Vector3<S>| v.dot(v).sqrt();
+    let normx = |v: Vector3<S>| norm(v).max(S::from(1e-6).unwrap());
+    let normalized = |v: Vector3<S>| v / normx(v);
+    let project_along = |v: Vector3<S>, n: Vector3<S>| v - n * v.dot(n);
+
+    let lft = normalized(left - corner);
+    let rgt = normalized(right - corner);
+    let dia = lft + rgt;
+
+    if norm(dia).to_f64().unwrap() < 0.01 {
+        let s = normalized(center - corner);
+        let t = project_along(s, lft);
+        return corner + s * (wd / normx(t));
+    } else if norm(lft.cross(rgt)).to_f64().unwrap() < 0.01 {
+        return corner + normalized(dia) * wd;
+    } else {
+        let len = wd * norm(dia) / normx(project_along(dia, lft));
+        let s = normalized(dia.cross(lft.cross(rgt)));
+        let t = project_along(center - corner, s);
+        let f = len / normx(t);
+        return corner + t * f;
+    }
 }
 
 
