@@ -16,10 +16,10 @@ pub fn opposite(e: &OrientedEdge) -> OrientedEdge {
 pub struct Mesh<T> {
     vertices: Vec<T>,
     at_vertex: Vec<OrientedEdge>,
-    along_face: Vec<OrientedEdge>,
-    along_boundary_component: Vec<OrientedEdge>,
+    on_face: Vec<OrientedEdge>,
+    on_boundary_component: Vec<OrientedEdge>,
     to_face: BTreeMap<OrientedEdge, usize>,
-    next: BTreeMap<OrientedEdge, OrientedEdge>
+    next_on_face: BTreeMap<OrientedEdge, OrientedEdge>
 }
 
 
@@ -28,10 +28,10 @@ impl<T> Mesh<T> {
         Mesh {
             vertices: vec![],
             at_vertex: vec![],
-            along_face: vec![],
-            along_boundary_component: vec![],
+            on_face: vec![],
+            on_boundary_component: vec![],
             to_face: BTreeMap::new(),
-            next: BTreeMap::new(),
+            next_on_face: BTreeMap::new(),
         }
     }
 
@@ -75,13 +75,13 @@ impl<T> Mesh<T> {
             .flat_map(|(i, b)| b.iter().map(move |&e| (e, i)))
             .collect();
 
-        let along_boundary_component: Vec<_> = to_boundary_component.iter()
+        let on_boundary_component: Vec<_> = to_boundary_component.iter()
             .map(|(&e, &b)| (b, e))
             .collect::<BTreeMap<_, _>>().iter()
             .map(|(_, &e)| e)
             .collect();
 
-        let next: BTreeMap<_, _> = oriented_edges_lists.iter()
+        let next_on_face: BTreeMap<_, _> = oriented_edges_lists.iter()
             .chain(boundary_lists.iter())
             .flat_map(cyclic_pairs)
             .collect();
@@ -89,10 +89,10 @@ impl<T> Mesh<T> {
         Mesh {
             vertices,
             at_vertex,
-            along_face,
-            along_boundary_component,
+            on_face: along_face,
+            on_boundary_component,
             to_face,
-            next,
+            next_on_face,
         }
     }
 
@@ -149,29 +149,37 @@ impl<T> Mesh<T> {
         &self.vertices
     }
 
+    pub fn next_at_vertex(&self, e: (usize, usize)) -> Option<(usize, usize)> {
+        self.next_on_face.get(&opposite(&e)).copied()
+    }
+
+    pub fn next_on_face(&self, e: (usize, usize)) -> Option<(usize, usize)> {
+        self.next_on_face.get(&e).copied()
+    }
+
     fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.next.get(&e).copied())
+            trace_cycle(start, |e| self.next_on_face(e))
                 .iter()
                 .map(|&(v, _)| v)
                 .collect()
         )
     }
-
+    
     pub fn face_indices(&self) -> Vec<Vec<usize>> {
-        self.along_face.iter()
+        self.on_face.iter()
             .map(|&e| self.vertices_in_face(e))
             .collect()
     }
 
     pub fn boundary_indices(&self) -> Vec<Vec<usize>> {
-        self.along_boundary_component.iter()
+        self.on_boundary_component.iter()
             .map(|&e| self.vertices_in_face(e))
             .collect()
     }
 
     pub fn edge_indices(&self) -> Vec<(usize, usize)> {
-        self.next.keys()
+        self.next_on_face.keys()
             .map(|&(u, v)| (u.min(v), u.max(v)))
             .collect::<BTreeSet<_>>().into_iter()
             .collect()
@@ -179,7 +187,7 @@ impl<T> Mesh<T> {
 
     fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.next.get(&opposite(&e)).copied())
+            trace_cycle(start, |e| self.next_at_vertex(e))
                 .iter()
                 .map(|&(_, w)| w)
                 .rev()
@@ -233,7 +241,7 @@ impl<T: Clone> Mesh<T> {
 
         let mut faces_out = vec![];
         for (&(u, v), &i) in self.to_face.iter() {
-            let w = self.next.get(&(u, v)).unwrap_or(&(v, u)).1;
+            let w = self.next_on_face.get(&(u, v)).unwrap_or(&(v, u)).1;
 
             faces_out.push(vec![
                 v,
