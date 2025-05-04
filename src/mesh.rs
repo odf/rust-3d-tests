@@ -149,11 +149,11 @@ impl<T> Mesh<T> {
         &self.vertices
     }
 
-    pub fn next_at_vertex(&self, e: (usize, usize)) -> Option<(usize, usize)> {
+    pub fn next_at_vertex(&self, e: OrientedEdge) -> Option<OrientedEdge> {
         self.next_on_face.get(&opposite(&e)).copied()
     }
 
-    pub fn next_on_face(&self, e: (usize, usize)) -> Option<(usize, usize)> {
+    pub fn next_on_face(&self, e: OrientedEdge) -> Option<OrientedEdge> {
         self.next_on_face.get(&e).copied()
     }
 
@@ -241,7 +241,7 @@ impl<T: Clone> Mesh<T> {
 
         let mut faces_out = vec![];
         for (&(u, v), &i) in self.to_face.iter() {
-            let w = self.next_on_face.get(&(u, v)).unwrap_or(&(v, u)).1;
+            let w = self.next_on_face((u, v)).unwrap_or((v, u)).1;
 
             faces_out.push(vec![
                 v,
