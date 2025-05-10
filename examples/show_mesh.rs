@@ -139,7 +139,7 @@ fn inset_test() -> three_d::CpuMesh {
         let mid = corners[i];
         let rgt = corners[(i + 1) % n];
 
-        inset.push(mesh::inset_corner(mid, 0.1, lft, rgt, center));
+        inset.push(mesh::inset_point(mid, 0.1, lft, rgt, center));
     }
 
     let mut faces = vec![];

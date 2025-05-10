@@ -493,7 +493,7 @@ fn indexed_centroid<S: BaseFloat, I: IntoIterator<Item=usize>>(
 }
 
 
-pub fn inset_corner<S: BaseFloat>(
+pub fn inset_point<S: BaseFloat>(
     corner: Point3<S>,
     wd: S,
     left: Point3<S>,
