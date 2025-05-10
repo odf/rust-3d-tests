@@ -391,6 +391,36 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
 
         Mesh::from_oriented_faces_unchecked(pos_out, self.face_indices())
     }
+
+    pub fn inset_corner(&self, bnd_edge: OrientedEdge, wd: S) -> Point3<S> {
+        let pos = self.vertices();
+        let mut e = bnd_edge;
+        let mut ends = vec![];
+
+        loop {
+            ends.push(pos[e.1]);
+            e = self.previous_at_vertex(e);
+            if e == bnd_edge {
+                break;
+            }
+        }
+
+        let corner = pos[bnd_edge.1];
+        let left = ends[0];
+        let right = ends[ends.len() - 1];
+
+        let points = if ends.len() > 2 {
+            &ends[1..(ends.len() - 1)]
+        } else {
+            &self.vertices_in_face(self.previous_at_vertex(bnd_edge)).iter()
+                .map(|&v| pos[v])
+                .collect::<Vec<_>>()[..]
+        };
+
+        let center = Point3::centroid(points);
+
+        inset_point(corner, wd, left, right, center)
+    }
 }
 
 
