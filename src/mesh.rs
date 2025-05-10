@@ -149,17 +149,17 @@ impl<T> Mesh<T> {
         &self.vertices
     }
 
-    pub fn previous_at_vertex(&self, e: OrientedEdge) -> Option<OrientedEdge> {
-        self.next_on_face.get(&opposite(&e)).copied()
+    pub fn previous_at_vertex(&self, e: OrientedEdge) -> OrientedEdge {
+        self.next_on_face.get(&opposite(&e)).unwrap().clone()
     }
 
-    pub fn next_on_face(&self, e: OrientedEdge) -> Option<OrientedEdge> {
-        self.next_on_face.get(&e).copied()
+    pub fn next_on_face(&self, e: OrientedEdge) -> OrientedEdge {
+        self.next_on_face.get(&e).unwrap().clone()
     }
 
     fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.next_on_face(e))
+            trace_cycle(start, |e| Some(self.next_on_face(e)))
                 .iter()
                 .map(|&(v, _)| v)
                 .collect()
@@ -187,7 +187,7 @@ impl<T> Mesh<T> {
 
     fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.previous_at_vertex(e))
+            trace_cycle(start, |e| Some(self.previous_at_vertex(e)))
                 .iter()
                 .map(|&(_, w)| w)
                 .rev()
@@ -241,7 +241,7 @@ impl<T: Clone> Mesh<T> {
 
         let mut faces_out = vec![];
         for (&(u, v), &i) in self.to_face.iter() {
-            let w = self.next_on_face((u, v)).unwrap_or((v, u)).1;
+            let w = self.next_on_face((u, v)).1;
 
             faces_out.push(vec![
                 v,
