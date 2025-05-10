@@ -149,7 +149,7 @@ impl<T> Mesh<T> {
         &self.vertices
     }
 
-    pub fn next_at_vertex(&self, e: OrientedEdge) -> Option<OrientedEdge> {
+    pub fn previous_at_vertex(&self, e: OrientedEdge) -> Option<OrientedEdge> {
         self.next_on_face.get(&opposite(&e)).copied()
     }
 
@@ -187,7 +187,7 @@ impl<T> Mesh<T> {
 
     fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
-            trace_cycle(start, |e| self.next_at_vertex(e))
+            trace_cycle(start, |e| self.previous_at_vertex(e))
                 .iter()
                 .map(|&(_, w)| w)
                 .rev()
