@@ -157,7 +157,7 @@ impl<T> Mesh<T> {
         self.next_on_face.get(&e).unwrap().clone()
     }
 
-    fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
+    pub fn vertices_in_face(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
             trace_cycle(start, |e| Some(self.next_on_face(e)))
                 .iter()
@@ -185,7 +185,7 @@ impl<T> Mesh<T> {
             .collect()
     }
 
-    fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
+    pub fn vertex_neighbors(&self, start: OrientedEdge) -> Vec<usize> {
         canonical_circular(
             trace_cycle(start, |e| Some(self.previous_at_vertex(e)))
                 .iter()
