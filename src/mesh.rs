@@ -422,6 +422,23 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         inset_point(corner, wd, left, right, center)
     }
 
+    pub fn elevate_corner(&self, bnd_edge: OrientedEdge, ht: S) -> Point3<S> {
+        let pos = self.vertices();
+        let mut ea = bnd_edge;
+        let mut n = Vector3::zero();
+
+        loop {
+            let eb = self.previous_at_vertex(ea);
+            if eb == bnd_edge {
+                break;
+            }
+            n += (pos[eb.1] - pos[eb.0]).cross(pos[ea.1] - pos[ea.0]);
+            ea = eb;
+        }
+
+        pos[bnd_edge.0] + n.normalize() * ht
+    }
+
     pub fn revised_boundaries(&self, f: impl Fn(OrientedEdge) -> Point3<S>)
         -> Mesh<Point3<S>>
     {
