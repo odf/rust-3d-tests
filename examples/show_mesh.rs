@@ -96,40 +96,37 @@ fn build_mesh(context: &three_d::Context)
     }
 
     let inset = |e| mesh.inset_corner(e, 0.1);
+    let elevate = |e| mesh.elevate_corner(e, 0.1);
 
-    let face = mesh.revised_boundaries(inset).tightened(true).to_cpu_mesh();
-    let outline = mesh.boundary_strips(inset).to_cpu_mesh();
+    let elevated = mesh.revised_boundaries(elevate).tightened(true);
+    let shrunk = mesh.revised_boundaries(inset).tightened(true);
+    let outline = mesh.boundary_strips(inset);
 
-    // Model construction also transfers the mesh data to the GPU.
-    let mut face = three_d::Gm::new(
-        three_d::Mesh::new(&context, &face),
-        three_d::PhysicalMaterial {
-            albedo: asset::Srgba::BLUE,
-            metallic: 0.0,
-            roughness: 0.5,
-            ..Default::default()
-        }
-    );
+    let mut result = vec![];
 
-    let mut outline = three_d::Gm::new(
-        three_d::Mesh::new(&context, &outline),
-        three_d::PhysicalMaterial {
-            albedo: asset::Srgba::RED,
-            metallic: 0.0,
-            roughness: 0.5,
-            ..Default::default()
-        }
-    );
+    for (mesh, color) in [
+        (shrunk, asset::Srgba::BLUE),
+        (elevated, asset::Srgba::BLUE),
+        (outline, asset::Srgba::RED)
+    ] {
+        let mut mesh = three_d::Gm::new(
+            three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
+            three_d::PhysicalMaterial {
+                albedo: color,
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
+        );
 
-    face.set_animation(|time|
-        asset::Mat4::from_angle_y(asset::radians(time * 0.001))
-    );
+        mesh.set_animation(|time|
+            asset::Mat4::from_angle_y(asset::radians(time * 0.0003))
+        );
 
-    outline.set_animation(|time|
-        asset::Mat4::from_angle_y(asset::radians(time * 0.001))
-    );
+        result.push(mesh);
+    }
 
-    vec![face, outline]
+    result
 }
 
 
