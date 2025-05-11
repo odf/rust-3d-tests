@@ -53,23 +53,7 @@ fn run() {
         10.0,
     );
 
-    let mesh = build_mesh();
-    //let mesh = inset_test();
-
-    // Model construction also transfers the mesh data to the GPU.
-    let mut model = three_d::Gm::new(
-        three_d::Mesh::new(&context, &mesh),
-        three_d::PhysicalMaterial {
-            albedo: asset::Srgba::BLUE,
-            metallic: 0.0,
-            roughness: 0.5,
-            ..Default::default()
-        }
-    );
-
-    model.set_animation(|time|
-        asset::Mat4::from_angle_y(asset::radians(time * 0.001))
-    );
+    let mut models = build_mesh(&context);
 
     let sun = three_d::DirectionalLight::new(
         &context,
@@ -88,11 +72,13 @@ fn run() {
         // This ensures a correct viewport after a window resize.
         camera.set_viewport(frame_input.viewport);
 
-        model.animate(frame_input.accumulated_time as f32);
+        for i in 0..models.len() {
+            models[i].animate(frame_input.accumulated_time as f32);
+        }
 
         frame_input.screen()
             .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
-            .render(&camera, &model, &[&sun, &ambient]);
+            .render(&camera, &models, &[&sun, &ambient]);
 
         // Ensures a valid return value.
         three_d::FrameOutput::default()
@@ -100,68 +86,48 @@ fn run() {
 }
 
 
-fn build_mesh() -> three_d::CpuMesh {
+fn build_mesh(context: &three_d::Context)
+    -> Vec<three_d::Gm<three_d::Mesh, three_d::PhysicalMaterial>>
+{
     let mut mesh = saddle_mesh();
 
     for _ in 0..4 {
         mesh = mesh.subd(true).tightened(true);
     }
 
-    mesh = mesh.inset_boundaries(0.1).tightened(true);
+    let face = mesh.inset_boundaries(0.1).tightened(true).to_cpu_mesh();
+    let outline = mesh.boundary_strips(0.1).to_cpu_mesh();
 
-    mesh.to_cpu_mesh()
-}
-
-
-fn inset_test() -> three_d::CpuMesh {
-    let center = point3( 0.0,  0.0,  0.0);
-
-    let corners = [
-        point3( 1.0,  1.0,  1.0),
-        point3( 0.5,  1.0,  1.0),
-        point3( 0.0,  1.0,  1.0),
-        point3(-0.5,  1.0,  1.0),
-        point3(-1.0,  1.0,  1.0),
-        point3(-1.0,  0.0,  1.0),
-        point3(-1.0, -1.0,  1.0),
-        point3(-1.0, -1.0,  0.0),
-        point3(-1.0, -1.0, -1.0),
-        point3( 0.0, -1.0, -1.0),
-        point3( 1.0, -1.0, -1.0),
-        point3( 1.0,  0.0, -1.0),
-        point3( 1.0,  1.0, -1.0),
-        point3( 1.0,  1.0, -0.5),
-        point3( 1.0,  1.0,  0.0),
-        point3( 1.0,  1.0,  0.5),
-    ];
-
-    let n = corners.len();
-
-    let mut inset = vec![];
-    for i in 0..n {
-        let lft = corners[(i + n - 1) % n];
-        let mid = corners[i];
-        let rgt = corners[(i + 1) % n];
-
-        inset.push(mesh::inset_point(mid, 0.1, lft, rgt, center));
-    }
-
-    let mut faces = vec![];
-    for i in 0..n {
-        let j = (i + 1) % n;
-        if i == 1 || i == 2 {
-            faces.push(vec![0, i + n + 1, j + n + 1]);
+    // Model construction also transfers the mesh data to the GPU.
+    let mut face = three_d::Gm::new(
+        three_d::Mesh::new(&context, &face),
+        three_d::PhysicalMaterial {
+            albedo: asset::Srgba::BLUE,
+            metallic: 0.0,
+            roughness: 0.5,
+            ..Default::default()
         }
-        faces.push(vec![i + 1, j + 1, j + n + 1, i + n + 1]);
-    }
+    );
 
-    let vertices: Vec<_> = [center].iter()
-        .chain(corners.iter())
-        .chain(inset.iter())
-        .cloned()
-        .collect();
+    let mut outline = three_d::Gm::new(
+        three_d::Mesh::new(&context, &outline),
+        three_d::PhysicalMaterial {
+            albedo: asset::Srgba::RED,
+            metallic: 0.0,
+            roughness: 0.5,
+            ..Default::default()
+        }
+    );
 
-    Mesh::from_oriented_faces(vertices, faces).unwrap().to_cpu_mesh()
+    face.set_animation(|time|
+        asset::Mat4::from_angle_y(asset::radians(time * 0.001))
+    );
+
+    outline.set_animation(|time|
+        asset::Mat4::from_angle_y(asset::radians(time * 0.001))
+    );
+
+    vec![face, outline]
 }
 
 
