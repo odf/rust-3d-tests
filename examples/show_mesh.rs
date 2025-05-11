@@ -53,8 +53,8 @@ fn run() {
         10.0,
     );
 
-    //let mesh = build_mesh();
-    let mesh = inset_test();
+    let mesh = build_mesh();
+    //let mesh = inset_test();
 
     // Model construction also transfers the mesh data to the GPU.
     let mut model = three_d::Gm::new(
@@ -102,9 +102,13 @@ fn run() {
 
 fn build_mesh() -> three_d::CpuMesh {
     let mut mesh = saddle_mesh();
+
     for _ in 0..4 {
         mesh = mesh.subd(true).tightened(true);
     }
+
+    mesh = mesh.inset_boundaries(0.1).tightened(true);
+
     mesh.to_cpu_mesh()
 }
 

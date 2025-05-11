@@ -405,7 +405,7 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
             }
         }
 
-        let corner = pos[bnd_edge.1];
+        let corner = pos[bnd_edge.0];
         let left = ends[0];
         let right = ends[ends.len() - 1];
 
@@ -420,6 +420,27 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         let center = Point3::centroid(points);
 
         inset_point(corner, wd, left, right, center)
+    }
+
+    pub fn inset_boundaries(&self, wd: S)
+        -> Mesh<Point3<S>>
+    {
+        let pos = self.vertices();
+        let mut pos_new = pos.clone();
+
+        for cycle in self.boundary_indices() {
+            let start = (cycle[0], cycle[1]);
+            let mut e = start;
+            loop {
+                pos_new[e.0] = self.inset_corner(e, wd);
+                e = self.next_on_face(e);
+                if e == start {
+                    break;
+                }
+            }
+        }
+
+        Mesh::from_oriented_faces(pos_new, self.face_indices()).unwrap()
     }
 }
 
