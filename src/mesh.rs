@@ -422,25 +422,33 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         inset_point(corner, wd, left, right, center)
     }
 
-    pub fn inset_boundaries(&self, wd: S)
-        -> Mesh<Point3<S>>
-    {
-        let pos = self.vertices();
-        let mut pos_new = pos.clone();
+    pub fn inset_boundaries(&self, wd: S) -> Mesh<Point3<S>> {
+        let mut pos = self.vertices().clone();
 
-        for cycle in self.boundary_indices() {
-            let start = (cycle[0], cycle[1]);
-            let mut e = start;
-            loop {
-                pos_new[e.0] = self.inset_corner(e, wd);
-                e = self.next_on_face(e);
-                if e == start {
-                    break;
-                }
+        for &e in &self.on_boundary_component {
+            for (v, p) in self.cycle_insets(wd, e) {
+                pos[v] = p;
             }
         }
 
-        Mesh::from_oriented_faces(pos_new, self.face_indices()).unwrap()
+        Mesh::from_oriented_faces(pos, self.face_indices()).unwrap()
+    }
+
+    fn cycle_insets(&self, wd: S, start: OrientedEdge)
+        -> Vec<(usize, Point3<S>)>
+    {
+        let mut result = vec![];
+        let mut e = start;
+
+        loop {
+            result.push((e.0, self.inset_corner(e, wd)));
+            e = self.next_on_face(e);
+            if e == start {
+                break;
+            }
+        }
+
+        result
     }
 }
 
