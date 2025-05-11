@@ -422,11 +422,14 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         inset_point(corner, wd, left, right, center)
     }
 
-    pub fn inset_boundaries(&self, wd: S) -> Mesh<Point3<S>> {
+    pub fn revised_boundaries(&self, f: impl Fn(OrientedEdge) -> Point3<S>)
+        -> Mesh<Point3<S>>
+    {
         let mut pos = self.vertices().clone();
 
         for &e in &self.on_boundary_component {
-            for (v, p) in self.cycle_insets(wd, e) {
+            let mods = self.cycle_revisions(&f, e);
+            for (v, p) in mods {
                 pos[v] = p;
             }
         }
@@ -434,17 +437,19 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         Mesh::from_oriented_faces(pos, self.face_indices()).unwrap()
     }
 
-    pub fn boundary_strips(&self, wd: S) -> Mesh<Point3<S>> {
+    pub fn boundary_strips(&self, f: impl Fn(OrientedEdge) -> Point3<S>)
+        -> Mesh<Point3<S>>
+    {
         let mut pos = vec![];
         let mut faces = vec![];
 
         for &e in &self.on_boundary_component {
-            let insets = self.cycle_insets(wd, e);
+            let mods = self.cycle_revisions(&f, e);
             let n = pos.len();
-            let m = insets.len();
+            let m = mods.len();
 
-            pos.extend(insets.iter().map(|&(v, _)| self.vertices()[v]));
-            pos.extend(insets.iter().map(|&(_, p)| p));
+            pos.extend(mods.iter().map(|&(v, _)| self.vertices()[v]));
+            pos.extend(mods.iter().map(|&(_, p)| p));
 
             for i in 0..m {
                 let j = (i + 1) % m;
@@ -455,14 +460,18 @@ impl<S: BaseFloat> Mesh<Point3<S>> {
         Mesh::from_oriented_faces(pos, faces).unwrap()
     }
 
-    fn cycle_insets(&self, wd: S, start: OrientedEdge)
+    fn cycle_revisions(
+        &self,
+        f: impl Fn(OrientedEdge) -> Point3<S>,
+        start: OrientedEdge
+    )
         -> Vec<(usize, Point3<S>)>
     {
         let mut result = vec![];
         let mut e = start;
 
         loop {
-            result.push((e.0, self.inset_corner(e, wd)));
+            result.push((e.0, f(e)));
             e = self.next_on_face(e);
             if e == start {
                 break;

@@ -95,8 +95,10 @@ fn build_mesh(context: &three_d::Context)
         mesh = mesh.subd(true).tightened(true);
     }
 
-    let face = mesh.inset_boundaries(0.1).tightened(true).to_cpu_mesh();
-    let outline = mesh.boundary_strips(0.1).to_cpu_mesh();
+    let inset = |e| mesh.inset_corner(e, 0.1);
+
+    let face = mesh.revised_boundaries(inset).tightened(true).to_cpu_mesh();
+    let outline = mesh.boundary_strips(inset).to_cpu_mesh();
 
     // Model construction also transfers the mesh data to the GPU.
     let mut face = three_d::Gm::new(
