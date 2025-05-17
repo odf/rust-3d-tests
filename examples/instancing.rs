@@ -47,7 +47,11 @@ fn run() {
         vec3(0.0, 1.0, 0.0),
         three_d::degrees(20.0),
         0.1,
-        50.0,
+        1000.0,
+    );
+
+    let mut control = three_d::OrbitControl::new(
+        vec3(0.0, 0.0, 0.0), 1.0, 1000.0
     );
 
     let models = build_mesh(&context);
@@ -65,9 +69,12 @@ fn run() {
         three_d::Srgba::WHITE,
     );
 
-    window.render_loop(move |frame_input| {
+    window.render_loop(move |mut frame_input| {
         // This ensures a correct viewport after a window resize.
         camera.set_viewport(frame_input.viewport);
+
+        // Camera control must be after the gui update.
+        control.handle_events(&mut camera, &mut frame_input.events);
 
         frame_input.screen()
             .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
@@ -82,13 +89,13 @@ fn run() {
 fn build_mesh(context: &three_d::Context)
     -> Vec<three_d::Gm<three_d::InstancedMesh, three_d::PhysicalMaterial>>
 {
-    let strut = three_d::CpuMesh::cylinder(24);
+    let mut result = vec![];
 
-    let mut instanced_mesh = three_d::Gm::new(
+    let mut struts = three_d::Gm::new(
         three_d::InstancedMesh::new(
             &context,
             &three_d::Instances::default(),
-            &strut
+            &three_d::CpuMesh::cylinder(24)
         ),
         three_d::PhysicalMaterial {
             albedo: three_d::Srgba::GREEN,
@@ -98,28 +105,65 @@ fn build_mesh(context: &three_d::Context)
         }
     );
 
-    instanced_mesh.set_instances(&three_d::Instances {
+    let center = Mat4::from_translation(vec3(-1.0, 0.0, 0.0))
+        * Mat4::from_nonuniform_scale(2.0, 0.1, 0.1);
+
+    let rot_y = Mat4::from_angle_y(three_d::degrees(90.0));
+    let rot_z = Mat4::from_angle_z(three_d::degrees(90.0));
+
+    struts.set_instances(&three_d::Instances {
         transformations: vec![
-            (
-                Mat4::from_translation(vec3(-1.0, 0.0, 0.0)) *
-                Mat4::from_nonuniform_scale(2.0, 0.095, 0.095)
-            ),
-            (
-                Mat4::from_angle_y(three_d::degrees(90.0)) *
-                Mat4::from_translation(vec3(-1.0, 0.0, 0.0)) *
-                Mat4::from_nonuniform_scale(2.0, 0.095, 0.095)
-            ),
-            (
-                Mat4::from_angle_z(three_d::degrees(90.0)) *
-                Mat4::from_translation(vec3(-1.0, 0.0, 0.0)) *
-                Mat4::from_nonuniform_scale(2.0, 0.095, 0.095)
-            ),
+            Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
+            Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
+            Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
+            Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
+
+            rot_y * Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
+            rot_y * Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
+            rot_y * Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
+            rot_y * Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
+
+            rot_z * Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
+            rot_z * Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
+            rot_z * Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
+            rot_z * Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
         ],
         ..Default::default()
     });
 
-    let mut result = vec![];
-    result.push(instanced_mesh);
+    result.push(struts);
+
+    let mut balls = three_d::Gm::new(
+        three_d::InstancedMesh::new(
+            &context,
+            &three_d::Instances::default(),
+            &three_d::CpuMesh::sphere(24)
+        ),
+        three_d::PhysicalMaterial {
+            albedo: three_d::Srgba::RED,
+            metallic: 0.0,
+            roughness: 0.5,
+            ..Default::default()
+        }
+    );
+
+    let scale = Mat4::from_scale(0.105);
+
+    balls.set_instances(&three_d::Instances {
+        transformations: vec![
+            Mat4::from_translation(vec3(-1.0, -1.0, -1.0)) * scale,
+            Mat4::from_translation(vec3(-1.0, -1.0,  1.0)) * scale,
+            Mat4::from_translation(vec3(-1.0,  1.0, -1.0)) * scale,
+            Mat4::from_translation(vec3(-1.0,  1.0,  1.0)) * scale,
+            Mat4::from_translation(vec3( 1.0, -1.0, -1.0)) * scale,
+            Mat4::from_translation(vec3( 1.0, -1.0,  1.0)) * scale,
+            Mat4::from_translation(vec3( 1.0,  1.0, -1.0)) * scale,
+            Mat4::from_translation(vec3( 1.0,  1.0,  1.0)) * scale,
+        ],
+        ..Default::default()
+    });
+
+    result.push(balls);
 
     result
 }
