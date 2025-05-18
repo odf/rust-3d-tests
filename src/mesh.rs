@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use cgmath::prelude::*;
+use cgmath::{prelude::*, vec3};
 use cgmath::{point3, BaseFloat, Point3, Vector3};
+use three_d::degrees;
 
 
 type OrientedEdge = (usize, usize);
@@ -629,6 +630,44 @@ pub fn inset_point<S: BaseFloat>(
         let f = len / normx(t);
         return corner + t * f;
     }
+}
+
+
+pub fn cylinder<S: BaseFloat>(
+    start: Point3<S>, end: Point3<S>, radius: S, nr_segments: usize
+)
+    -> Mesh<Point3<S>>
+{
+    let dir = (end - start).normalize();
+
+    let t: Vector3<S> =
+        if Vector3::unit_x().dot(dir).abs().to_f64().unwrap() < 0.71 {
+            Vector3::unit_x()
+        } else {
+            Vector3::unit_y()
+        };
+
+    let a = (t - dir * t.dot(dir)).normalize();
+    let b = dir.cross(a).normalize();
+
+    assert!((a.cross(b).dot(dir).to_f64().unwrap() - 1.0).abs() < 1e-12);
+
+    let mut pos = vec![];
+    let mut faces = vec![];
+
+    for p in [start, end] {
+        for i in 0..nr_segments {
+            let alpha = degrees(S::from(360.0 / 24.0 * i as f64).unwrap());
+            pos.push(p + (a * alpha.cos() + b * alpha.sin()) * radius);
+        }
+    }
+
+    for i in 0..nr_segments {
+        let j = (i + 1) % nr_segments;
+        faces.push(vec![nr_segments + i, nr_segments + j, j, i]);
+    }
+
+    Mesh::from_oriented_faces(pos, faces).unwrap()
 }
 
 
