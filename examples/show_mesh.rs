@@ -1,8 +1,7 @@
-use cgmath::{point3, EuclideanSpace, Point3};
+use cgmath::{point3, vec3, EuclideanSpace, Point3};
 use three_d_asset as asset;
-use three_d::Geometry;
 
-use rust_3d_tests::mesh::{self, Mesh};
+use rust_3d_tests::mesh::Mesh;
 
 
 fn main() {
@@ -50,10 +49,14 @@ fn run() {
         asset::vec3(0.0, 1.0, 0.0),
         asset::degrees(25.0),
         0.1,
-        10.0,
+        1000.0,
     );
 
-    let mut models = build_mesh(&context);
+    let mut control = three_d::OrbitControl::new(
+        vec3(0.0, 0.0, 0.0), 1.0, 1000.0
+    );
+
+    let models = build_mesh(&context);
 
     let sun = three_d::DirectionalLight::new(
         &context,
@@ -68,13 +71,12 @@ fn run() {
         asset::Srgba::WHITE,
     );
 
-    window.render_loop(move |frame_input| {
+    window.render_loop(move |mut frame_input| {
         // This ensures a correct viewport after a window resize.
         camera.set_viewport(frame_input.viewport);
 
-        for i in 0..models.len() {
-            models[i].animate(frame_input.accumulated_time as f32);
-        }
+        // Camera control must be after the gui update.
+        control.handle_events(&mut camera, &mut frame_input.events);
 
         frame_input.screen()
             .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
@@ -109,7 +111,7 @@ fn build_mesh(context: &three_d::Context)
         (elevated, asset::Srgba::BLUE),
         (outline, asset::Srgba::RED)
     ] {
-        let mut mesh = three_d::Gm::new(
+        result.push(three_d::Gm::new(
             three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
             three_d::PhysicalMaterial {
                 albedo: color,
@@ -117,13 +119,7 @@ fn build_mesh(context: &three_d::Context)
                 roughness: 0.5,
                 ..Default::default()
             }
-        );
-
-        mesh.set_animation(|time|
-            asset::Mat4::from_angle_y(asset::radians(time * 0.0003))
-        );
-
-        result.push(mesh);
+        ));
     }
 
     result
