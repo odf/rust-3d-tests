@@ -110,23 +110,24 @@ fn build_mesh(context: &three_d::Context)
 
     let rot_y = Mat4::from_angle_y(three_d::degrees(90.0));
     let rot_z = Mat4::from_angle_z(three_d::degrees(90.0));
+    let shift = |x, y, z| Mat4::from_translation(vec3(x, y, z));
 
     struts.set_instances(&three_d::Instances {
         transformations: vec![
-            Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
-            Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
-            Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
-            Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
+            shift(0.0, -1.0, -1.0) * center,
+            shift(0.0, -1.0,  1.0) * center,
+            shift(0.0,  1.0, -1.0) * center,
+            shift(0.0,  1.0,  1.0) * center,
 
-            rot_y * Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
-            rot_y * Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
-            rot_y * Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
-            rot_y * Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
+            rot_y * shift(0.0, -1.0, -1.0) * center,
+            rot_y * shift(0.0, -1.0,  1.0) * center,
+            rot_y * shift(0.0,  1.0, -1.0) * center,
+            rot_y * shift(0.0,  1.0,  1.0) * center,
 
-            rot_z * Mat4::from_translation(vec3(0.0, -1.0, -1.0)) * center,
-            rot_z * Mat4::from_translation(vec3(0.0, -1.0,  1.0)) * center,
-            rot_z * Mat4::from_translation(vec3(0.0,  1.0, -1.0)) * center,
-            rot_z * Mat4::from_translation(vec3(0.0,  1.0,  1.0)) * center,
+            rot_z * shift(0.0, -1.0, -1.0) * center,
+            rot_z * shift(0.0, -1.0,  1.0) * center,
+            rot_z * shift(0.0,  1.0, -1.0) * center,
+            rot_z * shift(0.0,  1.0,  1.0) * center,
         ],
         ..Default::default()
     });
@@ -151,14 +152,14 @@ fn build_mesh(context: &three_d::Context)
 
     balls.set_instances(&three_d::Instances {
         transformations: vec![
-            Mat4::from_translation(vec3(-1.0, -1.0, -1.0)) * scale,
-            Mat4::from_translation(vec3(-1.0, -1.0,  1.0)) * scale,
-            Mat4::from_translation(vec3(-1.0,  1.0, -1.0)) * scale,
-            Mat4::from_translation(vec3(-1.0,  1.0,  1.0)) * scale,
-            Mat4::from_translation(vec3( 1.0, -1.0, -1.0)) * scale,
-            Mat4::from_translation(vec3( 1.0, -1.0,  1.0)) * scale,
-            Mat4::from_translation(vec3( 1.0,  1.0, -1.0)) * scale,
-            Mat4::from_translation(vec3( 1.0,  1.0,  1.0)) * scale,
+            shift(-1.0, -1.0, -1.0) * scale,
+            shift(-1.0, -1.0,  1.0) * scale,
+            shift(-1.0,  1.0, -1.0) * scale,
+            shift(-1.0,  1.0,  1.0) * scale,
+            shift( 1.0, -1.0, -1.0) * scale,
+            shift( 1.0, -1.0,  1.0) * scale,
+            shift( 1.0,  1.0, -1.0) * scale,
+            shift( 1.0,  1.0,  1.0) * scale,
         ],
         ..Default::default()
     });
