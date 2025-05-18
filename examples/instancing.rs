@@ -56,12 +56,14 @@ fn run() {
 
     let models = build_mesh(&context);
 
-    let sun = three_d::DirectionalLight::new(
+    let mut sun = three_d::DirectionalLight::new(
         &context,
         2.0,
         three_d::Srgba::WHITE,
-        three_d::vec3(1.0, -1.0, -1.0)
+        three_d::vec3(-1.0, -0.5, -1.0)
     );
+
+    sun.generate_shadow_map(2048, &models);
 
     let ambient = three_d::AmbientLight::new(
         &context,
