@@ -1,7 +1,6 @@
 use cgmath::{point3, vec3, EuclideanSpace, Point3};
-use three_d_asset as asset;
 
-use rust_3d_tests::mesh::Mesh;
+use rust_3d_tests::mesh::{self, Mesh};
 
 
 fn main() {
@@ -44,10 +43,10 @@ fn run() {
 
     let mut camera = three_d::Camera::new_perspective(
         window.viewport(),
-        asset::vec3(0.0, 2.0, 8.0),
-        asset::vec3(0.0, 0.0, 0.0),
-        asset::vec3(0.0, 1.0, 0.0),
-        asset::degrees(25.0),
+        vec3(0.0, 2.0, 8.0),
+        vec3(0.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        three_d::degrees(25.0),
         0.1,
         1000.0,
     );
@@ -61,14 +60,14 @@ fn run() {
     let sun = three_d::DirectionalLight::new(
         &context,
         2.0,
-        asset::Srgba::WHITE,
-        asset::vec3(1.0, -1.0, -1.0)
+        three_d::Srgba::WHITE,
+        vec3(1.0, -1.0, -1.0)
     );
 
     let ambient = three_d::AmbientLight::new(
         &context,
         0.1,
-        asset::Srgba::WHITE,
+        three_d::Srgba::WHITE,
     );
 
     window.render_loop(move |mut frame_input| {
@@ -97,7 +96,7 @@ fn build_mesh(context: &three_d::Context)
         mesh = mesh.subd(true).tightened(true);
     }
 
-    let inset = |e| mesh.inset_corner(e, 0.1);
+    let inset = |e| mesh.inset_corner(e, 0.12);
     let elevate = |e| mesh.elevate_corner(e, 0.1);
 
     let elevated = mesh.revised_boundaries(elevate).tightened(true);
@@ -107,14 +106,35 @@ fn build_mesh(context: &three_d::Context)
     let mut result = vec![];
 
     for (mesh, color) in [
-        (shrunk, asset::Srgba::BLUE),
-        (elevated, asset::Srgba::BLUE),
-        (outline, asset::Srgba::RED)
+        (shrunk, three_d::Srgba::BLUE),
+        (elevated, three_d::Srgba::BLUE),
+        (outline, three_d::Srgba::RED),
     ] {
         result.push(three_d::Gm::new(
             three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
             three_d::PhysicalMaterial {
                 albedo: color,
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
+        ));
+    }
+
+    for (start, end) in [
+        (point3( 1.0,  1.0,  1.0), point3(-1.0,  1.0,  1.0)),
+        (point3(-1.0,  1.0,  1.0), point3(-1.0, -1.0,  1.0)),
+        (point3(-1.0, -1.0,  1.0), point3(-1.0, -1.0, -1.0)),
+        (point3(-1.0, -1.0, -1.0), point3( 1.0, -1.0, -1.0)),
+        (point3( 1.0, -1.0, -1.0), point3( 1.0,  1.0, -1.0)),
+        (point3( 1.0,  1.0, -1.0), point3( 1.0,  1.0,  1.0)),
+    ] {
+        let mesh = mesh::cylinder(start, end, 0.09, 24);
+
+        result.push(three_d::Gm::new(
+            three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
+            three_d::PhysicalMaterial {
+                albedo: three_d::Srgba::GREEN,
                 metallic: 0.0,
                 roughness: 0.5,
                 ..Default::default()
@@ -238,8 +258,8 @@ impl ToCpuMesh for Mesh<Point3<f64>> {
             .collect();
 
         let mut mesh = three_d::CpuMesh {
-            positions: asset::Positions::F64(positions),
-            indices: asset::Indices::U32(indices),
+            positions: three_d::Positions::F64(positions),
+            indices: three_d::Indices::U32(indices),
             ..Default::default()
         };
         mesh.compute_normals();
