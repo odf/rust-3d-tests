@@ -56,7 +56,7 @@ fn run() {
         vec3(0.0, 0.0, 0.0), 1.0, 1000.0
     );
 
-    let models = model_from_mesh(&context, saddle_mesh());
+    let models = model_from_mesh(&context, diamond_cage());
 
     let sun = three_d::DirectionalLight::new(
         &context,
@@ -129,40 +129,54 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
         ));
     }
 
-    let mut face_mesh = mesh;
+    for f in mesh.face_indices() {
+        let mut face_mesh = Mesh::from_oriented_faces(
+            f.iter().map(|&v| mesh.vertices()[v]),
+            [(0..f.len())]
+        ).unwrap();
 
-    for _ in 0..4 {
-        face_mesh = face_mesh.subd(true).tightened(true);
-    }
-
-    let elevate = |e| face_mesh.elevate_corner(e, 0.1);
-    let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
-
-    result.push(three_d::Gm::new(
-        three_d::Mesh::new(&context, &elevated.to_cpu_mesh()),
-        three_d::PhysicalMaterial {
-            albedo: three_d::Srgba::BLUE,
-            metallic: 0.0,
-            roughness: 0.5,
-            ..Default::default()
+        for _ in 0..4 {
+            face_mesh = face_mesh.subd(true).tightened(true);
         }
-    ));
+
+        let elevate = |e| face_mesh.elevate_corner(e, 0.1);
+        let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
+
+        result.push(three_d::Gm::new(
+            three_d::Mesh::new(&context, &elevated.to_cpu_mesh()),
+            three_d::PhysicalMaterial {
+                albedo: three_d::Srgba::BLUE,
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
+        ));
+    }
 
     result
 }
 
 
-fn saddle_mesh() -> Mesh<Point3<f64>> {
+fn diamond_cage() -> Mesh<Point3<f64>> {
     Mesh::from_oriented_faces(
         [
-            point3( 1.0,  1.0,  1.0),
-            point3(-1.0,  1.0,  1.0),
-            point3(-1.0, -1.0,  1.0),
-            point3(-1.0, -1.0, -1.0),
-            point3( 1.0, -1.0, -1.0),
-            point3( 1.0,  1.0, -1.0),
+            point3( 1.0,  1.0,  1.0), // 0
+            point3(-1.0, -1.0,  1.0), // 1
+            point3( 1.0, -1.0, -1.0), // 2
+            point3(-1.0,  1.0, -1.0), // 3
+            point3(-2.0,  0.0,  0.0), // 4
+            point3( 0.0, -2.0,  0.0), // 5
+            point3( 0.0,  0.0, -2.0), // 6
+            point3( 2.0,  0.0,  0.0), // 7
+            point3( 0.0,  2.0,  0.0), // 8
+            point3( 0.0,  0.0,  2.0), // 9
         ],
-        [[0, 1, 2, 3, 4, 5]]
+        [
+            [0, 9, 1, 5, 2, 7],
+            [0, 7, 2, 6, 3, 8],
+            [0, 8, 3, 4, 1, 9],
+            [3, 6, 2, 5, 1, 4],
+        ]
     )
         .unwrap()
 }
