@@ -93,7 +93,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
 {
     let mut result = vec![];
 
-    for (u, v) in mesh.boundary_edge_indices() {
+    for (u, v) in mesh.edge_indices() {
         let start = mesh.vertices()[u];
         let end = mesh.vertices()[v];
         let edge = mesh::cylinder(start, end, 0.095, 24);
@@ -110,26 +110,23 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
     }
 
     // TODO could use instancing here
-    for f in mesh.boundary_indices() {
-        for v in f {
-            let p = mesh.vertices()[v];
-            let mut sphere = three_d::CpuMesh::sphere(24);
-            sphere.transform(Mat4::from_scale(0.095)).unwrap();
-            sphere.transform(Mat4::from_translation(
-                vec3(p[0] as f32, p[1] as f32, p[2] as f32)
-            ))
-                .unwrap();
+    for p in mesh.vertices() {
+        let mut sphere = three_d::CpuMesh::sphere(24);
+        sphere.transform(Mat4::from_scale(0.095)).unwrap();
+        sphere.transform(Mat4::from_translation(
+            vec3(p[0] as f32, p[1] as f32, p[2] as f32)
+        ))
+            .unwrap();
 
-            result.push(three_d::Gm::new(
-                three_d::Mesh::new(&context, &sphere),
-                three_d::PhysicalMaterial {
-                    albedo: three_d::Srgba::GREEN,
-                    metallic: 0.0,
-                    roughness: 0.5,
-                    ..Default::default()
-                }
-            ));
-        }
+        result.push(three_d::Gm::new(
+            three_d::Mesh::new(&context, &sphere),
+            three_d::PhysicalMaterial {
+                albedo: three_d::Srgba::GREEN,
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
+        ));
     }
 
     let mut face_mesh = mesh;
@@ -158,91 +155,14 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
 fn saddle_mesh() -> Mesh<Point3<f64>> {
     Mesh::from_oriented_faces(
         [
-            point3( 0.0,  0.0,  0.0), // 0
-            point3( 1.0,  1.0,  1.0), // 1
-            point3(-1.0,  1.0,  1.0), // 2
-            point3(-1.0, -1.0,  1.0), // 3
-            point3(-1.0, -1.0, -1.0), // 4
-            point3( 1.0, -1.0, -1.0), // 5
-            point3( 1.0,  1.0, -1.0), // 6
-        ],
-        [
-            [0, 1, 2],
-            [0, 2, 3],
-            [0, 3, 4],
-            [0, 4, 5],
-            [0, 5, 6],
-            [0, 6, 1],
-        ]
-    )
-        .unwrap()
-}
-
-
-fn tetra_mesh() -> Mesh<Point3<f64>> {
-    Mesh::from_oriented_faces(
-        [
             point3( 1.0,  1.0,  1.0),
+            point3(-1.0,  1.0,  1.0),
+            point3(-1.0, -1.0,  1.0),
+            point3(-1.0, -1.0, -1.0),
             point3( 1.0, -1.0, -1.0),
-            point3(-1.0,  1.0, -1.0),
-            point3(-1.0, -1.0,  1.0)
+            point3( 1.0,  1.0, -1.0),
         ],
-        [
-            [0, 1, 2],
-            [1, 0, 3],
-            [2, 1, 3],
-            [0, 2, 3],
-        ]
-    )
-        .unwrap()
-}
-
-
-fn cube_mesh() -> Mesh<Point3<f64>> {
-    Mesh::from_oriented_faces(
-        [
-            point3( 1.0,  1.0,  1.0), // 0
-            point3( 1.0,  1.0, -1.0), // 1
-            point3( 1.0, -1.0,  1.0), // 2
-            point3( 1.0, -1.0, -1.0), // 3
-            point3(-1.0,  1.0,  1.0), // 4
-            point3(-1.0,  1.0, -1.0), // 5
-            point3(-1.0, -1.0,  1.0), // 6
-            point3(-1.0, -1.0, -1.0), // 7
-        ],
-        [
-            [0, 4, 6, 2],
-            [1, 3, 7, 5],
-            [0, 2, 3, 1],
-            [2, 6, 7, 3],
-            [6, 4, 5, 7],
-            [4, 0, 1, 5],
-        ]
-    )
-        .unwrap()
-}
-
-
-fn octa_mesh() -> Mesh<cgmath::Point3<f64>>  {
-    Mesh::from_oriented_faces(
-        [
-            point3( 1.0,  0.0,  0.0),
-            point3( 0.0,  1.0,  0.0),
-            point3( 0.0,  0.0,  1.0),
-            point3(-1.0,  0.0,  0.0),
-            point3( 0.0, -1.0,  0.0),
-            point3( 0.0,  0.0, -1.0),
-        ],
-        [
-            [ 0, 1, 2 ],
-            [ 1, 0, 5 ],
-            [ 2, 1, 3 ],
-            [ 0, 2, 4 ],
-            [ 3, 5, 4 ],
-            [ 5, 3, 1 ],
-            [ 4, 5, 0 ],
-            [ 3, 4, 2 ],
-        ]
+        [[0, 1, 2, 3, 4, 5]]
     )
         .unwrap()
 }
