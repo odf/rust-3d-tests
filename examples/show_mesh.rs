@@ -96,12 +96,12 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
     for (u, v) in mesh.edge_indices() {
         let start = mesh.vertices()[u];
         let end = mesh.vertices()[v];
-        let edge = mesh::cylinder(start, end, 0.095, 24);
+        let edge = mesh::cylinder(start, end, 0.0475, 24);
 
         result.push(three_d::Gm::new(
             three_d::Mesh::new(&context, &edge.to_cpu_mesh()),
             three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::GREEN,
+                albedo: three_d::Srgba::new(224, 128, 0, 255),
                 metallic: 0.0,
                 roughness: 0.5,
                 ..Default::default()
@@ -112,7 +112,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
     // TODO could use instancing here
     for p in mesh.vertices() {
         let mut sphere = three_d::CpuMesh::sphere(24);
-        sphere.transform(Mat4::from_scale(0.095)).unwrap();
+        sphere.transform(Mat4::from_scale(0.0475)).unwrap();
         sphere.transform(Mat4::from_translation(
             vec3(p[0] as f32, p[1] as f32, p[2] as f32)
         ))
@@ -121,7 +121,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
         result.push(three_d::Gm::new(
             three_d::Mesh::new(&context, &sphere),
             three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::GREEN,
+                albedo: three_d::Srgba::new(224, 128, 0, 255),
                 metallic: 0.0,
                 roughness: 0.5,
                 ..Default::default()
@@ -139,7 +139,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
             face_mesh = face_mesh.subd(true).tightened(true);
         }
 
-        let elevate = |e| face_mesh.elevate_corner(e, 0.1);
+        let elevate = |e| face_mesh.elevate_corner(e, 0.05);
         let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
 
         result.push(three_d::Gm::new(
