@@ -22,7 +22,7 @@ fn wrapper() {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    model_from_mesh();
+    decompose_mesh();
 
     if let Ok(report) = guard.report().build() {
         let file = std::fs::File::create("flamegraph.svg").unwrap();
@@ -56,7 +56,19 @@ fn run() {
         vec3(0.0, 0.0, 0.0), 1.0, 1000.0
     );
 
-    let models = model_from_mesh(&context, diamond_cage());
+    let base_mesh = diamond_cage();
+
+    let models: Vec<_> = decompose_mesh(base_mesh).iter()
+        .map(|(mesh, color)| three_d::Gm::new(
+            three_d::Mesh::new(&context, &mesh),
+            three_d::PhysicalMaterial {
+                albedo: *color,
+                metallic: 0.0,
+                roughness: 0.5,
+                ..Default::default()
+            }
+        ))
+        .collect();
 
     let sun = three_d::DirectionalLight::new(
         &context,
@@ -88,9 +100,10 @@ fn run() {
 }
 
 
-fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
-    -> Vec<three_d::Gm<three_d::Mesh, three_d::PhysicalMaterial>>
+fn decompose_mesh(mesh: Mesh<Point3<f64>>)
+    -> Vec<(three_d::CpuMesh, three_d::Srgba)>
 {
+    let edge_color = three_d::Srgba::new(224, 128, 0, 255);
     let mut result = vec![];
 
     for (u, v) in mesh.edge_indices() {
@@ -98,18 +111,9 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
         let end = mesh.vertices()[v];
         let edge = mesh::cylinder(start, end, 0.0475, 24);
 
-        result.push(three_d::Gm::new(
-            three_d::Mesh::new(&context, &edge.to_cpu_mesh()),
-            three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::new(224, 128, 0, 255),
-                metallic: 0.0,
-                roughness: 0.5,
-                ..Default::default()
-            }
-        ));
+        result.push((edge.to_cpu_mesh(), edge_color));
     }
 
-    // TODO could use instancing here
     for p in mesh.vertices() {
         let mut sphere = three_d::CpuMesh::sphere(24);
         sphere.transform(Mat4::from_scale(0.0475)).unwrap();
@@ -118,15 +122,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
         ))
             .unwrap();
 
-        result.push(three_d::Gm::new(
-            three_d::Mesh::new(&context, &sphere),
-            three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::new(224, 128, 0, 255),
-                metallic: 0.0,
-                roughness: 0.5,
-                ..Default::default()
-            }
-        ));
+        result.push((sphere, edge_color));
     }
 
     for f in mesh.face_indices() {
@@ -142,15 +138,7 @@ fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
         let elevate = |e| face_mesh.elevate_corner(e, 0.05);
         let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
 
-        result.push(three_d::Gm::new(
-            three_d::Mesh::new(&context, &elevated.to_cpu_mesh()),
-            three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::BLUE,
-                metallic: 0.0,
-                roughness: 0.5,
-                ..Default::default()
-            }
-        ));
+        result.push((elevated.to_cpu_mesh(), three_d::Srgba::BLUE));
     }
 
     result
