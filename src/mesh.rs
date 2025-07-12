@@ -166,7 +166,7 @@ impl<T> Mesh<T> {
                 .collect()
         )
     }
-    
+
     pub fn face_indices(&self) -> Vec<Vec<usize>> {
         self.on_face.iter()
             .map(|&e| self.vertices_in_face(e))
@@ -183,6 +183,12 @@ impl<T> Mesh<T> {
         self.next_on_face.keys()
             .map(|&(u, v)| (u.min(v), u.max(v)))
             .collect::<BTreeSet<_>>().into_iter()
+            .collect()
+    }
+
+    pub fn boundary_edge_indices(&self) -> Vec<(usize, usize)> {
+        self.boundary_indices().iter()
+            .flat_map(cyclic_pairs)
             .collect()
     }
 

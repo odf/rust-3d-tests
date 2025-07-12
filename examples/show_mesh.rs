@@ -1,6 +1,7 @@
 use cgmath::{point3, vec3, EuclideanSpace, Point3};
 
 use rust_3d_tests::mesh::{self, Mesh};
+use three_d::Mat4;
 
 
 fn main() {
@@ -21,7 +22,7 @@ fn wrapper() {
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build().unwrap();
 
-    build_mesh();
+    model_from_mesh();
 
     if let Ok(report) = guard.report().build() {
         let file = std::fs::File::create("flamegraph.svg").unwrap();
@@ -55,7 +56,7 @@ fn run() {
         vec3(0.0, 0.0, 0.0), 1.0, 1000.0
     );
 
-    let models = build_mesh(&context);
+    let models = model_from_mesh(&context, saddle_mesh());
 
     let sun = three_d::DirectionalLight::new(
         &context,
@@ -87,52 +88,18 @@ fn run() {
 }
 
 
-fn build_mesh(context: &three_d::Context)
+fn model_from_mesh(context: &three_d::Context, mesh: Mesh<Point3<f64>>)
     -> Vec<three_d::Gm<three_d::Mesh, three_d::PhysicalMaterial>>
 {
-    let mut mesh = saddle_mesh();
-
-    for _ in 0..4 {
-        mesh = mesh.subd(true).tightened(true);
-    }
-
-    let inset = |e| mesh.inset_corner(e, 0.12);
-    let elevate = |e| mesh.elevate_corner(e, 0.1);
-
-    let elevated = mesh.revised_boundaries(elevate).tightened(true);
-    let shrunk = mesh.revised_boundaries(inset).tightened(true);
-    let outline = mesh.boundary_strips(inset);
-
     let mut result = vec![];
 
-    for (mesh, color) in [
-        (shrunk, three_d::Srgba::BLUE),
-        (elevated, three_d::Srgba::BLUE),
-        (outline, three_d::Srgba::RED),
-    ] {
-        result.push(three_d::Gm::new(
-            three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
-            three_d::PhysicalMaterial {
-                albedo: color,
-                metallic: 0.0,
-                roughness: 0.5,
-                ..Default::default()
-            }
-        ));
-    }
-
-    for (start, end) in [
-        (point3( 1.0,  1.0,  1.0), point3(-1.0,  1.0,  1.0)),
-        (point3(-1.0,  1.0,  1.0), point3(-1.0, -1.0,  1.0)),
-        (point3(-1.0, -1.0,  1.0), point3(-1.0, -1.0, -1.0)),
-        (point3(-1.0, -1.0, -1.0), point3( 1.0, -1.0, -1.0)),
-        (point3( 1.0, -1.0, -1.0), point3( 1.0,  1.0, -1.0)),
-        (point3( 1.0,  1.0, -1.0), point3( 1.0,  1.0,  1.0)),
-    ] {
-        let mesh = mesh::cylinder(start, end, 0.09, 24);
+    for (u, v) in mesh.boundary_edge_indices() {
+        let start = mesh.vertices()[u];
+        let end = mesh.vertices()[v];
+        let edge = mesh::cylinder(start, end, 0.095, 24);
 
         result.push(three_d::Gm::new(
-            three_d::Mesh::new(&context, &mesh.to_cpu_mesh()),
+            three_d::Mesh::new(&context, &edge.to_cpu_mesh()),
             three_d::PhysicalMaterial {
                 albedo: three_d::Srgba::GREEN,
                 metallic: 0.0,
@@ -141,6 +108,48 @@ fn build_mesh(context: &three_d::Context)
             }
         ));
     }
+
+    // TODO could use instancing here
+    for f in mesh.boundary_indices() {
+        for v in f {
+            let p = mesh.vertices()[v];
+            let mut sphere = three_d::CpuMesh::sphere(24);
+            sphere.transform(Mat4::from_scale(0.095)).unwrap();
+            sphere.transform(Mat4::from_translation(
+                vec3(p[0] as f32, p[1] as f32, p[2] as f32)
+            ))
+                .unwrap();
+
+            result.push(three_d::Gm::new(
+                three_d::Mesh::new(&context, &sphere),
+                three_d::PhysicalMaterial {
+                    albedo: three_d::Srgba::GREEN,
+                    metallic: 0.0,
+                    roughness: 0.5,
+                    ..Default::default()
+                }
+            ));
+        }
+    }
+
+    let mut face_mesh = mesh;
+
+    for _ in 0..4 {
+        face_mesh = face_mesh.subd(true).tightened(true);
+    }
+
+    let elevate = |e| face_mesh.elevate_corner(e, 0.1);
+    let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
+
+    result.push(three_d::Gm::new(
+        three_d::Mesh::new(&context, &elevated.to_cpu_mesh()),
+        three_d::PhysicalMaterial {
+            albedo: three_d::Srgba::BLUE,
+            metallic: 0.0,
+            roughness: 0.5,
+            ..Default::default()
+        }
+    ));
 
     result
 }
