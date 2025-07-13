@@ -58,9 +58,29 @@ fn run() {
 
     let base_mesh = diamond_cage();
 
+    let shift = |x, y, z| Mat4::from_translation(vec3(x, y, z));
+    let flip = Mat4::from_axis_angle(
+        vec3(0.7071, 0.7071, 0.0),
+        three_d::degrees(180.0)
+    );
+    let scale = Mat4::from_scale(0.9);
+
+    let instances = three_d::Instances {
+        transformations: vec![
+            Mat4::from_scale(0.9),
+            shift( 2.0,  2.0,  0.0) * scale,
+            shift( 0.0,  2.0,  2.0) * scale,
+            shift( 2.0,  0.0,  2.0) * scale,
+            shift( 1.0, -1.0,  1.0) * flip * scale,
+            shift(-1.0,  1.0,  1.0) * flip * scale,
+            shift( 1.0,  1.0, -1.0) * flip * scale,
+        ],
+        ..Default::default()
+    };
+
     let models: Vec<_> = decompose_mesh(base_mesh).iter()
         .map(|(mesh, color)| three_d::Gm::new(
-            three_d::Mesh::new(&context, &mesh),
+            three_d::InstancedMesh::new(&context, &instances, &mesh),
             three_d::PhysicalMaterial {
                 albedo: *color,
                 metallic: 0.0,
