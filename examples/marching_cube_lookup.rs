@@ -10,7 +10,7 @@ fn main() {
         let inside: Vec<_> = (0..8).map(|bit| code & (1 << bit) > 0).collect();
         println!("{code} -> {inside:?}");
 
-        //let mut edges = [];
+        let mut edges = vec![];
 
         for f in faces.iter() {
             if let Some(p) = (0..4).position(|i|
@@ -22,23 +22,27 @@ fn main() {
 
                 match in_idcs[..] {
                     [1] => {
-
+                        edges.push(((f[1], f[2]), (f[1], f[0])));
                     },
                     [1, 2] => {
-
-                    },
-                    [1, 3] => {
-
+                        edges.push(((f[2], f[3]), (f[0], f[1])));
                     },
                     [1, 2, 3] => {
-
+                        edges.push(((f[0], f[3]), (f[0], f[1])));
+                    },
+                    [1, 3] => {
+                        edges.push(((f[1], f[2]), (f[1], f[0])));
+                        edges.push(((f[3], f[2]), (f[3], f[0])));
                     },
                     _ => {
-                        panic!()
+                        panic!("unexpected in_idcs value {in_idcs:?}");
                     },
                 }
             }
         }
+
+        println!("  {edges:?}");
+        // TODO normalize the edges, link them together and print the result
     }
 }
 
