@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use cgmath::{prelude::*, vec3};
+use cgmath::prelude::*;
 use cgmath::{point3, BaseFloat, Point3, Vector3};
 use three_d::degrees;
 
