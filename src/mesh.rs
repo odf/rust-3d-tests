@@ -1,8 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use cgmath::prelude::*;
-use cgmath::{point3, BaseFloat, Point3, Vector3};
-use three_d::degrees;
+use cgmath::{point3, BaseFloat, Deg, Point3, Vector3};
 
 
 type OrientedEdge = (usize, usize);
@@ -663,7 +662,7 @@ pub fn cylinder<S: BaseFloat>(
 
     for p in [start, end] {
         for i in 0..nr_segments {
-            let alpha = degrees(S::from(360.0 / 24.0 * i as f64).unwrap());
+            let alpha = Deg(S::from(360.0 / 24.0 * i as f64).unwrap());
             pos.push(p + (a * alpha.cos() + b * alpha.sin()) * radius);
         }
     }
