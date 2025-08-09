@@ -717,16 +717,19 @@ pub fn unit_sphere<S: BaseFloat>(nr_divisions: usize)
 }
 
 
-pub fn decompose_mesh(mesh: Mesh<Point3<f64>>)
-    -> Vec<(Mesh<Point3<f64>>, u8, u8, u8)>
+pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
+    -> Vec<(Mesh<Point3<S>>, u8, u8, u8)>
 {
+    let edge_radius = S::from(0.0475).unwrap();
+    let edge_lift = S::from(0.05).unwrap();
     let (r, g, b) = (224, 128, 0);
+
     let mut result = vec![];
 
     for (u, v) in mesh.edge_indices() {
         let start = mesh.vertices()[u];
         let end = mesh.vertices()[v];
-        let edge = cylinder(start, end, 0.0475, 24);
+        let edge = cylinder(start, end, edge_radius, 24);
 
         result.push((edge, r, g, b));
     }
@@ -736,7 +739,7 @@ pub fn decompose_mesh(mesh: Mesh<Point3<f64>>)
     for center in mesh.vertices() {
         let sphere = Mesh::from_oriented_faces_unchecked(
             s.vertices().iter()
-                .map(|p| center + (p - Point3::origin()) * (0.0475 as f64))
+                .map(|p| center + (p - Point3::origin()) * edge_radius)
                 .collect(),
             s.face_indices()
         );
@@ -754,7 +757,7 @@ pub fn decompose_mesh(mesh: Mesh<Point3<f64>>)
             face_mesh = face_mesh.subd(true).tightened(true);
         }
 
-        let elevate = |e| face_mesh.elevate_corner(e, 0.05);
+        let elevate = |e| face_mesh.elevate_corner(e, edge_lift);
         let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
 
         result.push((elevated, r, g, b));
