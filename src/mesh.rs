@@ -676,6 +676,94 @@ pub fn cylinder<S: BaseFloat>(
 }
 
 
+fn spherified<S: BaseFloat>(mesh: &Mesh<Point3<S>>) -> Mesh<Point3<S>> {
+    Mesh::from_oriented_faces_unchecked(
+        mesh.vertices().iter()
+            .map(|p| Point3::origin() + (p - Point3::origin()).normalize())
+            .collect(),
+        mesh.face_indices()
+    )
+}
+
+
+pub fn unit_sphere<S: BaseFloat>(nr_divisions: usize)
+    -> Mesh<Point3<S>>
+{
+    let one = S::one();
+
+    let mut mesh = Mesh::from_oriented_faces(
+        [
+            point3( one,  one,  one), // 0
+            point3(-one, -one,  one), // 1
+            point3( one, -one, -one), // 2
+            point3(-one,  one, -one), // 3
+        ],
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+            [0, 3, 1],
+            [3, 2, 1],
+        ]
+    )
+        .unwrap();
+
+    mesh = spherified(&mesh);
+
+    for _ in 0..nr_divisions {
+        mesh = spherified(&mesh.subd(true))
+    }
+
+    mesh
+}
+
+
+pub fn decompose_mesh(mesh: Mesh<Point3<f64>>)
+    -> Vec<(Mesh<Point3<f64>>, u8, u8, u8)>
+{
+    let (r, g, b) = (224, 128, 0);
+    let mut result = vec![];
+
+    for (u, v) in mesh.edge_indices() {
+        let start = mesh.vertices()[u];
+        let end = mesh.vertices()[v];
+        let edge = cylinder(start, end, 0.0475, 24);
+
+        result.push((edge, r, g, b));
+    }
+
+    let s = unit_sphere(4);
+
+    for center in mesh.vertices() {
+        let sphere = Mesh::from_oriented_faces_unchecked(
+            s.vertices().iter()
+                .map(|p| center + (p - Point3::origin()) * (0.0475 as f64))
+                .collect(),
+            s.face_indices()
+        );
+        result.push((sphere, r, g, b));
+    }
+
+    let (r, g, b) = (0, 0, 255);
+    for f in mesh.face_indices() {
+        let mut face_mesh = Mesh::from_oriented_faces(
+            f.iter().map(|&v| mesh.vertices()[v]),
+            [(0..f.len())]
+        ).unwrap();
+
+        for _ in 0..4 {
+            face_mesh = face_mesh.subd(true).tightened(true);
+        }
+
+        let elevate = |e| face_mesh.elevate_corner(e, 0.05);
+        let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
+
+        result.push((elevated, r, g, b));
+    }
+
+    result
+}
+
+
 #[cfg(test)]
 mod test {
     use cgmath::{point3, EuclideanSpace, Point3};

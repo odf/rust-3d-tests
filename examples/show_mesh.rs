@@ -78,11 +78,15 @@ fn run() {
         ..Default::default()
     };
 
-    let models: Vec<_> = decompose_mesh(base_mesh).iter()
-        .map(|(mesh, color)| three_d::Gm::new(
-            three_d::InstancedMesh::new(&context, &instances, &mesh),
+    let models: Vec<_> = mesh::decompose_mesh(base_mesh).iter()
+        .map(|(mesh, r, g, b)| three_d::Gm::new(
+            three_d::InstancedMesh::new(
+                &context,
+                &instances,
+                &mesh.to_cpu_mesh()
+            ),
             three_d::PhysicalMaterial {
-                albedo: *color,
+                albedo: three_d::Srgba::new(*r, *g, *b, 255),
                 metallic: 0.0,
                 roughness: 0.5,
                 ..Default::default()
@@ -117,51 +121,6 @@ fn run() {
         // Ensures a valid return value.
         three_d::FrameOutput::default()
     });
-}
-
-
-fn decompose_mesh(mesh: Mesh<Point3<f64>>)
-    -> Vec<(three_d::CpuMesh, three_d::Srgba)>
-{
-    let edge_color = three_d::Srgba::new(224, 128, 0, 255);
-    let mut result = vec![];
-
-    for (u, v) in mesh.edge_indices() {
-        let start = mesh.vertices()[u];
-        let end = mesh.vertices()[v];
-        let edge = mesh::cylinder(start, end, 0.0475, 24);
-
-        result.push((edge.to_cpu_mesh(), edge_color));
-    }
-
-    for p in mesh.vertices() {
-        let mut sphere = three_d::CpuMesh::sphere(24);
-        sphere.transform(Mat4::from_scale(0.0475)).unwrap();
-        sphere.transform(Mat4::from_translation(
-            vec3(p[0] as f32, p[1] as f32, p[2] as f32)
-        ))
-            .unwrap();
-
-        result.push((sphere, edge_color));
-    }
-
-    for f in mesh.face_indices() {
-        let mut face_mesh = Mesh::from_oriented_faces(
-            f.iter().map(|&v| mesh.vertices()[v]),
-            [(0..f.len())]
-        ).unwrap();
-
-        for _ in 0..4 {
-            face_mesh = face_mesh.subd(true).tightened(true);
-        }
-
-        let elevate = |e| face_mesh.elevate_corner(e, 0.05);
-        let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
-
-        result.push((elevated.to_cpu_mesh(), three_d::Srgba::BLUE));
-    }
-
-    result
 }
 
 
