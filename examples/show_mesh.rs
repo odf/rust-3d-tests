@@ -1,6 +1,6 @@
 use cgmath::{point3, vec3, EuclideanSpace, Point3};
 
-use rust_3d_tests::mesh::{self, Mesh};
+use rust_3d_tests::mesh::{self, ItemType, Mesh};
 use three_d::Mat4;
 
 
@@ -78,20 +78,31 @@ fn run() {
         ..Default::default()
     };
 
+    let face_color = three_d::Srgba::BLUE;
+    let edge_color = three_d::Srgba::new(224, 128, 0, 255);
+
     let models: Vec<_> = mesh::decompose_mesh(base_mesh).iter()
-        .map(|(mesh, r, g, b)| three_d::Gm::new(
-            three_d::InstancedMesh::new(
-                &context,
-                &instances,
-                &mesh.to_cpu_mesh()
-            ),
-            three_d::PhysicalMaterial {
-                albedo: three_d::Srgba::new(*r, *g, *b, 255),
-                metallic: 0.0,
-                roughness: 0.5,
-                ..Default::default()
-            }
-        ))
+        .map(|(mesh, item_type)| {
+            let color = match item_type {
+                ItemType::Vertex => edge_color,
+                ItemType::Edge => edge_color,
+                ItemType::Face => face_color,
+            };
+
+            three_d::Gm::new(
+                three_d::InstancedMesh::new(
+                    &context,
+                    &instances,
+                    &mesh.to_cpu_mesh()
+                ),
+                three_d::PhysicalMaterial {
+                    albedo: color,
+                    metallic: 0.0,
+                    roughness: 0.5,
+                    ..Default::default()
+                }
+            )
+        })
         .collect();
 
     let sun = three_d::DirectionalLight::new(

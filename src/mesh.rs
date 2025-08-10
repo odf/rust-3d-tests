@@ -717,12 +717,18 @@ pub fn unit_sphere<S: BaseFloat>(nr_divisions: usize)
 }
 
 
+pub enum ItemType {
+    Vertex,
+    Edge,
+    Face,
+}
+
+
 pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
-    -> Vec<(Mesh<Point3<S>>, u8, u8, u8)>
+    -> Vec<(Mesh<Point3<S>>, ItemType)>
 {
     let edge_radius = S::from(0.0475).unwrap();
     let edge_lift = S::from(0.05).unwrap();
-    let (r, g, b) = (224, 128, 0);
 
     let mut result = vec![];
 
@@ -731,7 +737,7 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
         let end = mesh.vertices()[v];
         let edge = cylinder(start, end, edge_radius, 24);
 
-        result.push((edge, r, g, b));
+        result.push((edge, ItemType::Edge));
     }
 
     let s = unit_sphere(4);
@@ -743,7 +749,7 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
                 .collect(),
             s.face_indices()
         );
-        result.push((sphere, r, g, b));
+        result.push((sphere, ItemType::Vertex));
     }
 
     let (r, g, b) = (0, 0, 255);
@@ -760,7 +766,7 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
         let elevate = |e| face_mesh.elevate_corner(e, edge_lift);
         let elevated = face_mesh.revised_boundaries(elevate).tightened(true);
 
-        result.push((elevated, r, g, b));
+        result.push((elevated, ItemType::Face));
     }
 
     result
