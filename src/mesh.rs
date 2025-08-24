@@ -752,7 +752,6 @@ pub fn decompose_mesh<S: BaseFloat>(mesh: Mesh<Point3<S>>)
         result.push((sphere, ItemType::Vertex));
     }
 
-    let (r, g, b) = (0, 0, 255);
     for f in mesh.face_indices() {
         let mut face_mesh = Mesh::from_oriented_faces(
             f.iter().map(|&v| mesh.vertices()[v]),
