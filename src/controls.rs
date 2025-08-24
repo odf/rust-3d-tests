@@ -1,5 +1,5 @@
 use cgmath::prelude::*;
-use three_d::{Camera, Event, MouseButton, Vec3};
+use three_d::{degrees, Camera, Event, MouseButton, Vec3};
 
 ///
 /// A control that makes the camera orbit around a target.
@@ -42,7 +42,7 @@ impl OrbitControl {
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
                         let dist = self.target.distance(camera.position());
-                        self.apply_zoom(camera, delta.1, 0.01 * dist + 0.001);
+                        self.apply_zoom(camera, delta.1, 0.005 * dist + 0.001);
                         *handled = true;
                         change = true;
                     }
@@ -65,13 +65,25 @@ impl OrbitControl {
         &self, camera: &mut Camera, delta: (f32, f32), button: MouseButton
     ) -> bool
     {
+        let (x, y) = delta;
+
         match button {
             MouseButton::Left => {
                 let speed = 0.1;
-                camera.rotate_around(self.target, speed * delta.0, speed * delta.1);
+                camera.rotate_around(self.target, speed * x, speed * y);
                 true
             }
-            _ => false
+            MouseButton::Middle => {
+                let speed = 0.01;
+                let shift = -camera.right_direction() * x + camera.up_orthogonal() * y;
+                camera.translate(speed * shift);
+                true
+            }
+            MouseButton::Right => {
+                let speed = 0.1;
+                camera.roll(degrees(speed * x));
+                true
+            }
         }
     }
 
