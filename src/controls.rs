@@ -25,51 +25,32 @@ impl OrbitControl {
     }
 
     /// Handles the events. Must be called each frame.
-    pub fn handle_events(&mut self, camera: &mut Camera, events: &mut [Event]) -> bool {
+    pub fn handle_events(&self, camera: &mut Camera, events: &mut [Event]) -> bool {
         let mut change = false;
         for event in events.iter_mut() {
             match event {
-                Event::MouseMotion {
-                    delta,
-                    button,
-                    handled,
-                    ..
-                } => {
-                    if !*handled {
-                        if Some(MouseButton::Left) == *button {
-                            let speed = 0.01;
-                            camera.rotate_around_with_fixed_up(
-                                self.target,
-                                speed * delta.0,
-                                speed * delta.1,
-                            );
-                            *handled = true;
-                            change = true;
+                Event::MouseMotion { delta, button, handled, .. } => {
+                    if let Some(button) = button {
+                        if !*handled {
+                            if self.apply_mouse_motion(camera, *delta, *button) {
+                                *handled = true;
+                                change = true;
+                            }
                         }
                     }
                 }
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
-                        let speed = 0.01 * self.target.distance(camera.position()) + 0.001;
-                        camera.zoom_towards(
-                            self.target,
-                            speed * delta.1,
-                            self.min_distance,
-                            self.max_distance,
-                        );
+                        let dist = self.target.distance(camera.position());
+                        self.apply_zoom(camera, delta.1, 0.01 * dist + 0.001);
                         *handled = true;
                         change = true;
                     }
                 }
                 Event::PinchGesture { delta, handled, .. } => {
                     if !*handled {
-                        let speed = self.target.distance(camera.position()) + 0.1;
-                        camera.zoom_towards(
-                            self.target,
-                            speed * *delta,
-                            self.min_distance,
-                            self.max_distance,
-                        );
+                        let dist = self.target.distance(camera.position());
+                        self.apply_zoom(camera, *delta, dist + 0.1);
                         *handled = true;
                         change = true;
                     }
@@ -78,5 +59,25 @@ impl OrbitControl {
             }
         }
         change
+    }
+
+    fn apply_mouse_motion(
+        &self, camera: &mut Camera, delta: (f32, f32), button: MouseButton
+    ) -> bool
+    {
+        match button {
+            MouseButton::Left => {
+                let speed = 0.1;
+                camera.rotate_around(self.target, speed * delta.0, speed * delta.1);
+                true
+            }
+            _ => false
+        }
+    }
+
+    fn apply_zoom(&self, camera: &mut Camera, delta: f32, speed: f32) {
+        camera.zoom_towards(
+            self.target, speed * delta, self.min_distance, self.max_distance,
+        );
     }
 }

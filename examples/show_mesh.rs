@@ -52,7 +52,7 @@ fn run() {
         1000.0,
     );
 
-    let mut control = rust_3d_tests::controls::OrbitControl::new(
+    let control = rust_3d_tests::controls::OrbitControl::new(
         vec3(0.0, 0.0, 0.0), 1.0, 1000.0
     );
 
