@@ -42,15 +42,7 @@ impl OrbitControl {
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
                         let dist = self.target.distance(camera.position());
-                        self.apply_zoom(camera, delta.1, 0.005 * dist + 0.001);
-                        *handled = true;
-                        change = true;
-                    }
-                }
-                Event::PinchGesture { delta, handled, .. } => {
-                    if !*handled {
-                        let dist = self.target.distance(camera.position());
-                        self.apply_zoom(camera, *delta, dist + 0.1);
+                        self.apply_zoom(camera, delta.1, 0.001 * dist);
                         *handled = true;
                         change = true;
                     }
