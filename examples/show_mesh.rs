@@ -1,4 +1,5 @@
-use cgmath::{point3, vec3, EuclideanSpace, Point3};
+use cgmath::prelude::*;
+use cgmath::{point3, vec3, vec4, Point3};
 
 use rust_3d_tests::mesh::{self, ItemType, Mesh};
 use three_d::Mat4;
@@ -105,11 +106,13 @@ fn run() {
         })
         .collect();
 
-    let sun = three_d::DirectionalLight::new(
+    let sun_dir = vec4(1.0, -1.0, -1.0, 0.0);
+
+    let mut sun = three_d::DirectionalLight::new(
         &context,
         2.0,
         three_d::Srgba::WHITE,
-        vec3(1.0, -1.0, -1.0)
+        sun_dir.truncate()
     );
 
     let ambient = three_d::AmbientLight::new(
@@ -124,6 +127,9 @@ fn run() {
 
         // Camera control must be after the gui update.
         control.handle_events(&mut camera, &mut frame_input.events);
+
+        // Moves the sun around the objects in sync with the camera.
+        sun.direction = (camera.view().invert().unwrap() * sun_dir).truncate();
 
         frame_input.screen()
             .clear(three_d::ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0))
