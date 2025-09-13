@@ -1,24 +1,20 @@
 use cgmath::prelude::*;
-use three_d::{degrees, Camera, Event, MouseButton, Vec3};
+use three_d::{degrees, Camera, Event, MouseButton};
 
 ///
-/// A control that makes the camera orbit around a target.
+/// A control that makes the camera orbit around its target point.
 ///
 #[derive(Clone, Copy, Debug)]
 pub struct OrbitControl {
-    /// The target point to orbit around.
-    pub target: Vec3,
-    /// The minimum distance to the target point.
+    /// The minimum distance to the camera target.
     pub min_distance: f32,
-    /// The maximum distance to the target point.
+    /// The maximum distance to the camera target.
     pub max_distance: f32,
 }
 
 impl OrbitControl {
-    /// Creates a new orbit control with the given target and minimum and maximum distance to the target.
-    pub fn new(target: Vec3, min_distance: f32, max_distance: f32) -> Self {
+    pub fn new(min_distance: f32, max_distance: f32) -> Self {
         Self {
-            target,
             min_distance,
             max_distance,
         }
@@ -26,6 +22,7 @@ impl OrbitControl {
 
     /// Handles the events. Must be called each frame.
     pub fn handle_events(&self, camera: &mut Camera, events: &mut [Event]) -> bool {
+        let target = camera.target();
         let mut change = false;
         for event in events.iter_mut() {
             match event {
@@ -41,7 +38,7 @@ impl OrbitControl {
                 }
                 Event::MouseWheel { delta, handled, .. } => {
                     if !*handled {
-                        let dist = self.target.distance(camera.position());
+                        let dist = target.distance(camera.position());
                         self.apply_zoom(camera, delta.1, 0.001 * dist);
                         *handled = true;
                         change = true;
@@ -58,11 +55,12 @@ impl OrbitControl {
     ) -> bool
     {
         let (x, y) = delta;
+        let target = camera.target();
 
         match button {
             MouseButton::Left => {
                 let speed = 0.1;
-                camera.rotate_around(self.target, speed * x, speed * y);
+                camera.rotate_around(target, speed * x, speed * y);
                 true
             }
             MouseButton::Middle => {
@@ -80,8 +78,9 @@ impl OrbitControl {
     }
 
     fn apply_zoom(&self, camera: &mut Camera, delta: f32, speed: f32) {
+        let target = camera.target();
         camera.zoom_towards(
-            self.target, speed * delta, self.min_distance, self.max_distance,
+            target, speed * delta, self.min_distance, self.max_distance,
         );
     }
 }
